@@ -1,11 +1,11 @@
 ---
 name: dbt-unit-tests
-description: Generate dbt unit tests for any model — seeds test scenarios via mcp__opende__generate_tests, assembles YAML with type-correct mock inputs, computes expected outputs via altimate-dbt execute, and writes complete YAML. Use when asked to "generate tests", "add unit tests", or "test this model".
+description: Generate dbt unit tests for any model — seeds test scenarios via mcp__opende__generate_tests, assembles YAML with type-correct mock inputs, computes expected outputs via {{RUNNER}} show --inline, and writes complete YAML. Use when asked to "generate tests", "add unit tests", or "test this model".
 ---
 
 # dbt Unit Test Generation
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) for full CLI reference.
+See [OPENDE_CLI.md](../OPENDE_CLI.md) for full CLI reference.
 
 ## When to Use This Skill
 
@@ -25,11 +25,11 @@ See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) for full CLI reference.
 
 ## The Iron Rules
 
-1. **Never guess expected outputs.** Compute them by running SQL against mock data when possible via `altimate-dbt execute`. If you cannot run SQL, clearly mark expected outputs as placeholders that need verification.
+1. **Never guess expected outputs.** Compute them by running SQL against mock data when possible via `{{RUNNER}} show --inline`. If you cannot run SQL, clearly mark expected outputs as placeholders that need verification.
 2. **Never skip upstream dependencies.** Every `ref()` and `source()` the model touches MUST have a mock input. Miss one and the test won't compile.
 3. **Use sql format for ephemeral models.** Dict format fails silently for ephemeral upstreams.
 4. **Never weaken a test to make it pass.** If the test fails, the model logic may be wrong. Investigate before changing expected values.
-5. **Compile before committing.** Always run `altimate-dbt test --model <name>` to verify tests compile and execute.
+5. **Compile before committing.** Always run `{{RUNNER}} test --select <name>` to verify tests compile and execute.
 
 ## Core Workflow: Analyze → Generate → Refine → Validate → Write
 
@@ -37,7 +37,7 @@ See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) for full CLI reference.
 
 ```bash
 # 1. Compile to render Jinja and populate target/
-altimate-dbt compile --model <name>
+{{RUNNER}} compile --select <name>
 
 # 2. Read the model SQL (source + compiled)
 # Source: models/<layer>/<name>.sql
@@ -60,10 +60,10 @@ Claude reads `target/manifest.json` for `nodes.<id>.columns` to get type-correct
 
 ```bash
 # For model upstreams
-{{RUNNER}} show --model <upstream_model_name>
+{{RUNNER}} show --select <upstream_model_name> --limit 0 --output json
 
 # For source upstreams
-{{RUNNER}} show-source --source <source_name> --table <table_name>
+mcp__opende__schema_inspect {"table": "<table_name>", "schema_name": "<source_name>"}
 ```
 
 Use these real column names and types — never invent column names.
@@ -86,7 +86,7 @@ Use these real column names and types — never invent column names.
 
 ```bash
 # Build a CTE with mock data and run the model SQL against it
-altimate-dbt execute --query "WITH mock_<upstream> AS (SELECT ...) <model_sql_body>" --limit 10
+{{RUNNER}} show --inline "WITH mock_<upstream> AS (SELECT ...) <model_sql_body>" --limit 10 --output json
 ```
 
 Use the actual output rows as your expected values.
@@ -98,7 +98,7 @@ Read the compiled SQL and trace through each logical branch with the mock inputs
 **Option C: Use test run to discover actuals**
 
 ```bash
-altimate-dbt test --model <name>
+{{RUNNER}} test --select <name>
 # Assertion errors show actual vs expected — use actual as expected if logic is correct
 ```
 
@@ -106,7 +106,7 @@ altimate-dbt test --model <name>
 
 ```bash
 # Run the unit tests
-altimate-dbt test --model <name>
+{{RUNNER}} test --select <name>
 
 # If tests fail:
 #   Compilation error? → Missing ref, wrong column name, type mismatch
@@ -173,9 +173,9 @@ Full YAML spec: [references/unit-test-yaml-spec.md](references/unit-test-yaml-sp
 | Mistake | Fix |
 |---------|-----|
 | Missing a ref() in given | Parse `target/manifest.json` for ALL `depends_on.nodes` |
-| Wrong column names in mock data | Use manifest columns or `{{RUNNER}} show` — never guess |
+| Wrong column names in mock data | Use manifest columns or `{{RUNNER}} show --select` — never guess |
 | Wrong data types | Use schema catalog types from manifest |
-| Expected output is just mock input | Actually compute the transformation via `altimate-dbt execute` |
+| Expected output is just mock input | Actually compute the transformation via `{{RUNNER}} show --inline` |
 | Dict format for ephemeral model | Use `format: sql` with raw SQL |
 | Not testing NULL path in COALESCE | Add null_handling test case explicitly |
 | Hardcoded dates with current_timestamp | Use `overrides.macros` to mock timestamps |
@@ -185,13 +185,13 @@ Full YAML spec: [references/unit-test-yaml-spec.md](references/unit-test-yaml-sp
 
 | Step | Deterministic (CLI / MCP) | Claude reasons |
 |------|--------------------------|----------------|
-| Compile model | `altimate-dbt compile --model <m>` | — |
+| Compile model | `{{RUNNER}} compile --select <m>` | — |
 | Parse dependencies | Read `target/manifest.json` | Identifies all refs/sources |
-| Discover columns | `{{RUNNER}} show` / `columns-source` | — |
+| Discover columns | `{{RUNNER}} show --select` / `mcp__opende__schema_inspect` | — |
 | Test seed | `mcp__opende__generate_tests` on compiled SQL (deterministic) | — |
 | Assemble YAML | — | Maps `test_cases[]` to dbt unit-test YAML |
-| Compute expected outputs | `altimate-dbt execute` (mock CTEs) | Refines expected values from actual output |
-| Validation | `altimate-dbt test --model <m>` | Interprets failures |
+| Compute expected outputs | `{{RUNNER}} show --inline` (mock CTEs) | Refines expected values from actual output |
+| Validation | `{{RUNNER}} test --select <m>` | Interprets failures |
 
 Reference guides:
 - [unit-test-yaml-spec.md](references/unit-test-yaml-spec.md)

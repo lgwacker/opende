@@ -7,7 +7,7 @@ description: Classify schema columns for PII (SSN, email, phone, name, address, 
 
 ## Requirements
 **Model:** Claude (report synthesis)
-**CLI:** `{{RUNNER}} show`, `{{RUNNER}} show-source`, `altimate-dbt compile`
+**CLI:** `{{RUNNER}} show`, `{{RUNNER}} compile --select`
 **MCP:** `mcp__opende__classify_pii`, `mcp__opende__check_query_pii`, `mcp__opende__schema_search`, `mcp__opende__schema_inspect`, `mcp__opende__execute`
 
 ## When to Use This Skill
@@ -39,12 +39,12 @@ Call `mcp__opende__classify_pii` — it auto-resolves the dbt schema from `targe
 - `risk_level` — overall schema risk level
 - `suggested_masking` — recommended masking strategy per column
 
-Supply column metadata from `{{RUNNER}} show` or `{{RUNNER}} show-source` as input if a specific model or source is the target:
+Supply column metadata from `{{RUNNER}} show` or `mcp__opende__schema_inspect` as input if a specific model or source is the target:
 
 ```bash
-{{RUNNER}} show --model <model_name>
+{{RUNNER}} show --select <model_name> --limit 10 --output json
 # or for a source:
-{{RUNNER}} show-source --source <source_name> --table <table_name>
+mcp__opende__schema_inspect {"table": "<table_name>", "schema_name": "<source_name>"}
 ```
 
 **Alternative — live warehouse schema discovery** (faster when the catalog is stale or the target is a raw source table):
@@ -80,14 +80,14 @@ mcp__opende__execute {
 }
 ```
 
-Use this to confirm whether a flagged column actually contains sensitive values (e.g. real emails vs. a column named `email` that holds only NULLs or synthetic data). Do **not** use `altimate-dbt execute` here — that is for dbt-model-scoped queries that need ref() resolution.
+Use this to confirm whether a flagged column actually contains sensitive values (e.g. real emails vs. a column named `email` that holds only NULLs or synthetic data). Do **not** use `{{RUNNER}} show --inline` here for raw warehouse SQL that doesn't need Jinja/ref() resolution — use `mcp__opende__execute` instead.
 
 ### 2. Check Query PII Exposure (Deterministic)
 
 For each dbt model, compile first so Jinja is resolved, then call `mcp__opende__check_query_pii` on the compiled SQL:
 
 ```bash
-altimate-dbt compile --model <name>
+{{RUNNER}} compile --select <name>
 # compiled SQL: target/compiled/<project>/<path>.sql
 ```
 
@@ -102,7 +102,7 @@ For batch runs, use the project gate script:
 ### 3. Audit dbt Models (Batch)
 
 1. Find all models: `find models/ -name '*.sql'`
-2. Compile each: `altimate-dbt compile --model <name>`
+2. Compile each: `{{RUNNER}} compile --select <name>`
 3. Call `mcp__opende__check_query_pii` on each compiled file
 4. Call `mcp__opende__classify_pii` for schema-wide column classification
 5. Claude aggregates results into a risk matrix
@@ -154,4 +154,4 @@ Recommendations:
 
 **Claude-reasoned:** Report synthesis, contextual remediation advice, and reviewing low-confidence classify_pii results where business context matters.
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md).
+See [OPENDE_CLI.md](../OPENDE_CLI.md).

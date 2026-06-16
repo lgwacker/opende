@@ -260,4 +260,4 @@ Example:
 
 `mcp__opende__data_diff` runs altimate-core's DataParitySession through the native Snowflake SDK executor (safety-gated, credentials from dbt profiles.yml). Same-warehouse Snowflake is fully supported; cross-warehouse diff is deferred (single dbt connection). The PII caution, key-confirmation step, auto-timestamp-exclusion confirmation, profile-first guidance, and "ask before scanning huge tables" guidance are fully preserved.
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md).
+See [OPENDE_CLI.md](../OPENDE_CLI.md).

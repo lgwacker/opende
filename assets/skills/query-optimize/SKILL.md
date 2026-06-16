@@ -1,13 +1,13 @@
 ---
 name: query-optimize
-description: Analyze and optimize SQL queries for performance — deterministic lint/anti-pattern checks via MCP tools, optimized rewrites and equivalence verification via MCP tools, EXPLAIN plans via altimate-dbt.
+description: Analyze and optimize SQL queries for performance — deterministic lint/anti-pattern checks via MCP tools, optimized rewrites and equivalence verification via MCP tools, EXPLAIN plans via {{RUNNER}}.
 ---
 
 # Query Optimize
 
 ## Requirements
 **Model:** Claude (Option A — no altimate agent)
-**Deterministic tools:** `mcp__opende__lint`, `mcp__opende__check_semantics`, `mcp__opende__evaluate`, `mcp__opende__rewrite`, `mcp__opende__check_equivalence`, `mcp__opende__explain`, `altimate-dbt execute`
+**Deterministic tools:** `mcp__opende__lint`, `mcp__opende__check_semantics`, `mcp__opende__evaluate`, `mcp__opende__rewrite`, `mcp__opende__check_equivalence`, `mcp__opende__explain`, `{{RUNNER}} show --inline`
 **Reasoning:** Claude interprets MCP tool output and presents findings
 
 Analyze SQL queries for performance issues and suggest concrete optimizations including rewritten SQL.
@@ -50,7 +50,7 @@ Analyze SQL queries for performance issues and suggest concrete optimizations in
 
    Optionally also run a live EXPLAIN against Snowflake (requires a live connection):
    ```bash
-   altimate-dbt execute --query "EXPLAIN <original_sql>" --limit 50
+   {{RUNNER}} show --inline "EXPLAIN <original_sql>" --limit 50 --output json
    ```
 
 8. **Present findings** in this format:
@@ -111,7 +111,7 @@ Analyze SQL queries for performance issues and suggest concrete optimizations in
 - Always run `mcp__opende__lint` + `mcp__opende__check_semantics` before proposing any rewrite — findings anchor the report.
 - Always run `mcp__opende__check_equivalence` on the rewrite before presenting it as safe.
 - If `equivalent` is false or confidence is low, flag it — never silently present a semantically different rewrite.
-- If `altimate-dbt execute` is unavailable (no live connection), skip the live EXPLAIN and note it.
+- If `{{RUNNER}} show --inline` is unavailable (no live connection), skip the live EXPLAIN and note it.
 
 ## How this maps (Option A)
 
@@ -120,6 +120,6 @@ Analyze SQL queries for performance issues and suggest concrete optimizations in
 | Anti-pattern detection | `mcp__opende__lint`, `mcp__opende__check_semantics`, `mcp__opende__evaluate` (deterministic) | — |
 | Optimized rewrite | `mcp__opende__rewrite` (deterministic) | — |
 | Equivalence verification | `mcp__opende__check_equivalence` (deterministic) | Claude flags divergences |
-| Execution plan | `mcp__opende__explain` (deterministic); optional `altimate-dbt execute` live EXPLAIN | Claude interprets cost_signals |
+| Execution plan | `mcp__opende__explain` (deterministic); optional `{{RUNNER}} show --inline` live EXPLAIN | Claude interprets cost_signals |
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md).
+See [OPENDE_CLI.md](../OPENDE_CLI.md).

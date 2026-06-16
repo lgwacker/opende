@@ -7,9 +7,9 @@ description: Document dbt models and columns in schema.yml with business context
 
 ## Requirements
 **Agent:** Claude Code (file write access required)
-**Tools used:** bash (`altimate-dbt`), MCP (`mcp__opende__*`), Read, Glob, Write, Edit
+**Tools used:** bash (`dbt`), MCP (`mcp__opende__*`), Read, Glob, Write, Edit
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) for the full CLI reference.
+See [OPENDE_CLI.md](../OPENDE_CLI.md) for the full CLI reference.
 
 ## When to Use This Skill
 
@@ -29,10 +29,10 @@ See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) for the full CLI reference.
 ### 1. Understand the Model
 
 ```bash
-{{RUNNER}} show --model <name>     # what columns exist
-altimate-dbt parents --model <name>     # what feeds this model
-altimate-dbt children --model <name>    # who consumes it
-altimate-dbt compile --model <name>     # render the SQL (resolves Jinja)
+{{RUNNER}} show --select <name> --limit 10 --output json     # what columns exist
+{{RUNNER}} ls --select +1<name> --output json                # what feeds this model
+{{RUNNER}} ls --select <name>+1 --output json               # who consumes it
+{{RUNNER}} compile --select <name>            # render the SQL (resolves Jinja)
 ```
 
 After compiling, gate the file and call MCP tools to extract structural metadata:
@@ -86,16 +86,16 @@ columns:
 ### 4. Validate
 
 ```bash
-altimate-dbt compile --model <name>    # ensure YAML is syntactically valid
+{{RUNNER}} compile --select <name>    # ensure YAML is syntactically valid
 ```
 
-No SQL quality checks are required for docs-only changes (no SQL is modified). If you want to confirm column names in the YAML match the compiled output, compare `{{RUNNER}} show --model <name>` against your YAML.
+No SQL quality checks are required for docs-only changes (no SQL is modified). If you want to confirm column names in the YAML match the compiled output, compare `{{RUNNER}} show --select <name> --limit 10` against your YAML.
 
 ## How this maps (Option A)
 
 | What stays deterministic (CLI / MCP) | What Claude reasons |
 |--------------------------------------|---------------------|
-| `altimate-dbt compile/columns/parents/children` | Authoring model and column descriptions |
+| `{{RUNNER}} compile/show/ls` | Authoring model and column descriptions |
 | `mcp__opende__extract_metadata` on compiled SQL | — (DETERMINISTIC structural extraction) |
 | `mcp__opende__column_lineage` on compiled SQL | — (DETERMINISTIC derivation map) |
 
@@ -115,5 +115,6 @@ Gate compiled files with `{{GATE_INVOCATION}} <files...>` before MCP calls. Desc
 
 | Guide | Use When |
 |-------|----------|
-| [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) | Full CLI reference for `altimate-dbt` |
+| [OPENDE_CLI.md](../OPENDE_CLI.md) | Full CLI reference for `dbt` and MCP tools |
+| [OPENDE_CLI.md](../OPENDE_CLI.md) | dbt CLI command reference |
 | [references/documentation-standards.md](references/documentation-standards.md) | Writing high-quality descriptions |

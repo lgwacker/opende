@@ -7,7 +7,7 @@ description: Pre-merge SQL quality gate — lint 26 anti-patterns, grade readabi
 
 ## Requirements
 **Model:** Claude (reads output, presents findings)
-**CLI:** `altimate-dbt compile`, project gate script, `bash` (git)
+**CLI:** `{{RUNNER}} compile --select`, project gate script, `bash` (git)
 **MCP:** `mcp__opende__lint`, `mcp__opende__validate`, `mcp__opende__scan_sql`, `mcp__opende__check_query_pii`, `mcp__opende__check_semantics`, `mcp__opende__evaluate`
 
 ## When to Use This Skill
@@ -36,7 +36,7 @@ git diff --name-only HEAD~1 | grep '\.sql$'
 For dbt models, compile first so Jinja is resolved before checking:
 
 ```bash
-altimate-dbt compile --model <name>
+{{RUNNER}} compile --select <name>
 # compiled output lands in target/compiled/<project>/<path>.sql
 ```
 
@@ -51,7 +51,7 @@ altimate-dbt compile --model <name>
 - `mcp__opende__check_semantics` — cartesian products, NULL-comparison issues, wrong joins
 - `mcp__opende__evaluate` — A-F quality score with per-category breakdown
 
-Schema-aware tools (`lint`, `check_semantics`, `evaluate`) auto-resolve the dbt schema from `target/catalog.json`. Refresh with `dbt docs generate` if the catalog is stale. Pass compiled SQL (from `altimate-dbt compile`) for Jinja models.
+Schema-aware tools (`lint`, `check_semantics`, `evaluate`) auto-resolve the dbt schema from `target/catalog.json`. Refresh with `dbt docs generate` if the catalog is stale. Pass compiled SQL (from `{{RUNNER}} compile --select`) for Jinja models.
 
 **Batch / PR review — use the project gate script** (handles exit codes and JSON stripping):
 ```bash
@@ -105,4 +105,4 @@ When reviewing multiple files (e.g., all changed SQL in a PR), present a summary
 
 **Claude-reasoned:** Presenting findings in readable prose, deciding which issues are blockers for a given PR context, and suggesting remediation wording.
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md).
+See [OPENDE_CLI.md](../OPENDE_CLI.md).

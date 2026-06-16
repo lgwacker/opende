@@ -34,10 +34,10 @@
 
 | Mistake | Fix |
 |---------|-----|
-| "It compiled, ship it" | Compilation only checks Jinja syntax. Always `altimate-dbt build` |
-| Not spot-checking output data | Run `altimate-dbt execute --query "SELECT * FROM {{ ref('model') }}" --limit 10` |
+| "It compiled, ship it" | Compilation only checks Jinja syntax. Always `{{RUNNER}} build --select` |
+| Not spot-checking output data | Run `{{RUNNER}} show --inline "SELECT * FROM {{ ref('model') }}" --limit 10` |
 | Not checking row counts | Compare source vs output: `SELECT count(*) FROM {{ ref('model') }}` |
-| Skipping downstream builds | Use `altimate-dbt build --model <name> --downstream` |
+| Skipping downstream builds | Use `{{RUNNER}} build --select <name>+` |
 
 ## Rationalizations to Resist
 

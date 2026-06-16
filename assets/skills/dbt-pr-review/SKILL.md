@@ -98,6 +98,6 @@ rubric:
 
 dbt models contain Jinja — the engine prefers **compiled** SQL (`target/compiled/...`)
 and skips parse-dependent lanes when only raw Jinja is available (those findings
-are marked unverified). Run `{{RUNNER}} compile` to give it clean SQL.
+are marked unverified). Run `{{RUNNER}} compile --select <model>` to give it clean SQL.
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) and the `reviewer` agent.
+See [OPENDE_CLI.md](../OPENDE_CLI.md) and the `reviewer` agent.

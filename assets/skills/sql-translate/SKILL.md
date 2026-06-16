@@ -107,4 +107,4 @@ Translate SQL queries from one database dialect to another using the determinist
 | Lossy-construct review | — | Claude flags from transpile warnings + output diff |
 | Deeper quality analysis (optional) | `mcp__opende__lint`, `mcp__opende__check_semantics` (deterministic) | — |
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md).
+See [OPENDE_CLI.md](../OPENDE_CLI.md).

@@ -5,7 +5,7 @@ Test failures mean the data violates an expected constraint. The test is usually
 ## Diagnosis
 
 ```bash
-altimate-dbt test --model <name>
+{{RUNNER}} test --select <name>
 ```
 
 ## Common Test Failures
@@ -16,13 +16,7 @@ altimate-dbt test --model <name>
 
 **Investigate**:
 ```bash
-altimate-dbt execute --query "
-  SELECT <column>, count(*) as cnt
-  FROM {{ ref('<model>') }}
-  GROUP BY 1
-  HAVING count(*) > 1
-  ORDER BY cnt DESC
-" --limit 10
+{{RUNNER}} show --inline "SELECT <column>, count(*) as cnt FROM {{ ref('<model>') }} GROUP BY 1 HAVING count(*) > 1 ORDER BY cnt DESC" --limit 10 --output json
 ```
 
 **Common causes**:
@@ -36,10 +30,7 @@ altimate-dbt execute --query "
 
 **Investigate**:
 ```bash
-altimate-dbt execute --query "
-  SELECT * FROM {{ ref('<model>') }}
-  WHERE <column> IS NULL
-" --limit 5
+{{RUNNER}} show --inline "SELECT * FROM {{ ref('<model>') }} WHERE <column> IS NULL" --limit 5 --output json
 ```
 
 **Common causes**:
@@ -53,7 +44,7 @@ altimate-dbt execute --query "
 
 **Investigate**:
 ```bash
-altimate-dbt column-values --model <name> --column <column>
+{{RUNNER}} show --inline "SELECT DISTINCT <column>, count(*) FROM {{ ref('<name>') }} GROUP BY 1 ORDER BY 2 DESC" --limit 20 --output json
 ```
 
 **Common causes**:
@@ -67,13 +58,7 @@ altimate-dbt column-values --model <name> --column <column>
 
 **Investigate**:
 ```bash
-altimate-dbt execute --query "
-  SELECT child.<fk_col>, count(*)
-  FROM {{ ref('<child>') }} child
-  LEFT JOIN {{ ref('<parent>') }} parent ON child.<fk_col> = parent.<pk_col>
-  WHERE parent.<pk_col> IS NULL
-  GROUP BY 1
-" --limit 10
+{{RUNNER}} show --inline "SELECT child.<fk_col>, count(*) FROM {{ ref('<child>') }} child LEFT JOIN {{ ref('<parent>') }} parent ON child.<fk_col> = parent.<pk_col> WHERE parent.<pk_col> IS NULL GROUP BY 1" --limit 10 --output json
 ```
 
 **Common causes**:

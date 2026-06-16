@@ -98,7 +98,7 @@ group by 1
 | Wrong timestamp column | Missed updates | Use `updated_at` not `created_at` for mutable data |
 | No lookback window | Late-arriving data missed | `max(ts) - interval '1 hour'` instead of strict `>` |
 | `on_schema_change='fail'` | Breaks on column additions | Use `'append_new_columns'` or `'sync_all_columns'` |
-| Full refresh needed | Schema drift accumulated | `altimate-dbt run --model <name>` with `--full-refresh` flag |
+| Full refresh needed | Schema drift accumulated | `{{RUNNER}} run --select <name> --full-refresh` |
 
 ## Official Documentation
 

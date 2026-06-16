@@ -100,4 +100,4 @@ re-run `schema_verify` until verdict is `match`.
   equality tests. Check row counts separately.
 - **Custom tests** — `check_*` / non-AUTO tests assert business rules, not shape.
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) and AGENTS.md §11 (dbt Verification Workflow).
+See [OPENDE_CLI.md](../OPENDE_CLI.md) and AGENTS.md §11 (dbt Verification Workflow).

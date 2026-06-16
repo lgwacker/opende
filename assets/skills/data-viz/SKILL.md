@@ -5,11 +5,11 @@ description: Build modern, interactive data visualizations and dashboards using 
 
 # AI-First Data Visualization
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) for CLI reference.
+See [OPENDE_CLI.md](../OPENDE_CLI.md) for CLI reference.
 
 ## How this maps (Option A)
 
-No altimate tooling is needed for this skill. Data comes from `altimate-dbt execute` query results (or user-supplied data). All visualization work is pure Claude + the libraries below.
+No altimate tooling is needed for this skill. Data comes from `{{RUNNER}} show --inline` query results or `mcp__opende__execute` for raw warehouse SQL (or user-supplied data). All visualization work is pure Claude + the libraries below.
 
 ## Philosophy
 
@@ -20,7 +20,7 @@ Build production-quality interactive data interfaces with modern component libra
 Before building, fetch query results from the warehouse when needed:
 
 ```bash
-altimate-dbt execute --query "SELECT ..." --limit 500
+{{RUNNER}} show --inline "SELECT ..." --limit 500 --output json
 ```
 
 Validate that every field referenced in chart/filter code exists in the query output.

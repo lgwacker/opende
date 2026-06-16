@@ -145,4 +145,4 @@ Returns stale tables (not accessed in the window) and idle warehouses. Claude fl
 
 The `mcp__opende__finops_*` tools run curated ACCOUNT_USAGE SQL via the native Snowflake executor (safety-gated by altimate-core, credentials from dbt profiles.yml). Per-query anti-pattern analysis still uses `mcp__opende__lint`/`check_semantics`/`evaluate`; optimization hints via `mcp__opende__rewrite`.
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md).
+See [OPENDE_CLI.md](../OPENDE_CLI.md).

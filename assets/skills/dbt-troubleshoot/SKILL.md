@@ -5,7 +5,7 @@ description: Debug dbt errors — compilation failures, runtime database errors,
 
 # dbt Troubleshooting
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) for full CLI reference.
+See [OPENDE_CLI.md](../OPENDE_CLI.md) for full CLI reference.
 
 ## When to Use This Skill
 
@@ -31,15 +31,13 @@ See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) for full CLI reference.
 ### Step 1: Health Check
 
 ```bash
-altimate-dbt doctor
-altimate-dbt info
+{{RUNNER}} debug
 ```
 
-If `doctor` fails, fix the environment first. Common issues:
-- Python not found → reinstall or set `--python-path`
+If `debug` fails, fix the environment first. Common issues:
 - dbt-core not installed → `pip install dbt-core`
-- No `dbt_project.yml` → wrong directory
-- Missing packages → if `packages.yml` exists but `dbt_packages/` doesn't, run `dbt deps`
+- No `dbt_project.yml` → run from the dbt project root
+- Missing packages → if `packages.yml` exists but `dbt_packages/` doesn't, run `{{RUNNER}} deps`
 
 ### Step 2: Classify the Error
 
@@ -54,14 +52,14 @@ If `doctor` fails, fix the environment first. Common issues:
 
 ```bash
 # Compile only — catches Jinja errors without hitting the database
-altimate-dbt compile --model <name>
+{{RUNNER}} compile --select <name>
 
 # If compile succeeds, try building
-altimate-dbt build --model <name>
+{{RUNNER}} build --select <name>
 
 # Probe the data directly
-altimate-dbt execute --query "SELECT count(*) FROM {{ ref('<name>') }}" --limit 1
-altimate-dbt execute --query "SELECT * FROM {{ ref('<name>') }}" --limit 5
+{{RUNNER}} show --inline "SELECT count(*) FROM {{ ref('<name>') }}" --limit 1 --output json
+{{RUNNER}} show --inline "SELECT * FROM {{ ref('<name>') }}" --limit 5 --output json
 ```
 
 ### Step 3b: Offline SQL Analysis
@@ -99,20 +97,20 @@ Use `{{RUNNER}} show` for model-graph schema; `mcp__opende__column_lineage` for 
 
 When a model builds but produces wrong results, explore the actual data.
 
-**Use `altimate-dbt execute` for queries that reference dbt models via `{{ ref() }}` — it resolves Jinja before hitting the warehouse:**
+**Use `{{RUNNER}} show --inline` for Jinja-aware queries (resolves `{{ ref() }}`):**
 
 ```bash
 # 1. Check for unexpected NULLs
-altimate-dbt execute --query "SELECT count(*) as total, count(<col>) as non_null, count(*) - count(<col>) as nulls FROM {{ ref('<name>') }}" --limit 1
+{{RUNNER}} show --inline "SELECT count(*) as total, count(<col>) as non_null, count(*) - count(<col>) as nulls FROM {{ ref('<name>') }}" --limit 1 --output json
 
 # 2. Check value ranges
-altimate-dbt execute --query "SELECT min(<metric>), max(<metric>), avg(<metric>) FROM {{ ref('<name>') }}" --limit 1
+{{RUNNER}} show --inline "SELECT min(<metric>), max(<metric>), avg(<metric>) FROM {{ ref('<name>') }}" --limit 1 --output json
 
 # 3. Check distinct values for key columns
-altimate-dbt execute --query "SELECT <col>, count(*) FROM {{ ref('<name>') }} GROUP BY 1 ORDER BY 2 DESC" --limit 20
+{{RUNNER}} show --inline "SELECT <col>, count(*) FROM {{ ref('<name>') }} GROUP BY 1 ORDER BY 2 DESC" --limit 20 --output json
 
 # 4. Compare row counts between model output and parent tables
-altimate-dbt execute --query "SELECT count(*) FROM {{ ref('<parent>') }}" --limit 1
+{{RUNNER}} show --inline "SELECT count(*) FROM {{ ref('<parent>') }}" --limit 1 --output json
 ```
 
 **Use `mcp__opende__execute` for raw warehouse queries — fully-qualified table names, `information_schema`, `ACCOUNT_USAGE`, or ad-hoc exploration. It does NOT resolve `{{ ref() }}`/Jinja.**
@@ -138,14 +136,14 @@ mcp__opende__schema_inspect {"table": "<table>", "schema_name": "<schema>"}
 ### Step 4: Check Upstream
 
 ```bash
-altimate-dbt parents --model <name>
+{{RUNNER}} ls --select +1<name> --output json
 ```
 
 Read the parent models. Build them individually. Query the parent data:
 
 ```bash
-altimate-dbt execute --query "SELECT count(*), count(DISTINCT <pk>) FROM {{ ref('<parent>') }}" --limit 1
-altimate-dbt execute --query "SELECT * FROM {{ ref('<parent>') }}" --limit 5
+{{RUNNER}} show --inline "SELECT count(*), count(DISTINCT <pk>) FROM {{ ref('<parent>') }}" --limit 1 --output json
+{{RUNNER}} show --inline "SELECT * FROM {{ ref('<parent>') }}" --limit 5 --output json
 ```
 
 ### Step 5: Fix and Verify
@@ -154,17 +152,17 @@ Claude proposes the fix based on Step 3b analysis. After applying:
 
 ```bash
 # Build with downstream to catch cascading impacts
-altimate-dbt build --model <name> --downstream
+{{RUNNER}} build --select <name>+
 
 # Verify the fix with data queries — don't just trust the build
-altimate-dbt execute --query "SELECT count(*) FROM {{ ref('<name>') }}" --limit 1
-altimate-dbt execute --query "SELECT * FROM {{ ref('<name>') }}" --limit 10
-altimate-dbt execute --query "SELECT min(<col>), max(<col>), count(*) - count(<col>) as nulls FROM {{ ref('<name>') }}" --limit 1
+{{RUNNER}} show --inline "SELECT count(*) FROM {{ ref('<name>') }}" --limit 1 --output json
+{{RUNNER}} show --inline "SELECT * FROM {{ ref('<name>') }}" --limit 10 --output json
+{{RUNNER}} show --inline "SELECT min(<col>), max(<col>), count(*) - count(<col>) as nulls FROM {{ ref('<name>') }}" --limit 1 --output json
 ```
 
 Re-gate and re-run MCP checks on the fixed compiled SQL:
 ```bash
-altimate-dbt compile --model <name>
+{{RUNNER}} compile --select <name>
 {{GATE_INVOCATION}} target/compiled/<project>/models/<path>/<name>.sql
 ```
 ```
@@ -188,7 +186,7 @@ mcp__opende__validate         compiled SQL
 |---------|-----|
 | Changing tests before understanding failures | Read the error. Query the data. Understand the root cause. |
 | Fixing symptoms instead of root cause | Trace the problem upstream. The bug is often 2 models back. |
-| Not checking upstream models | Run `altimate-dbt parents` and build parents individually |
+| Not checking upstream models | Run `{{RUNNER}} ls --select +1<name>` and build parents individually |
 | Ignoring warnings | Warnings often become errors. Fix them proactively. |
 | Not running offline SQL analysis | Compile first, then `mcp__opende__check_semantics` + `lint` + `validate` on compiled SQL |
 | Column names/order don't match schema | Read compiled SQL + `{{RUNNER}} show` to verify output columns |
@@ -199,13 +197,13 @@ mcp__opende__validate         compiled SQL
 
 | Step | Deterministic (CLI / MCP) | Claude reasons |
 |------|---------------------------|----------------|
-| Health check | `altimate-dbt doctor/info` | — |
-| Compile | `altimate-dbt compile` | — |
+| Health check | `{{RUNNER}} debug` | — |
+| Compile | `{{RUNNER}} compile --select` | — |
 | Semantic/lint checks | `mcp__opende__check_semantics` + `lint` + `validate` on compiled SQL | Interprets findings, decides root cause |
 | Column lineage | `mcp__opende__column_lineage` on compiled SQL (DETERMINISTIC) | — |
 | Auto-fix proposals | `mcp__opende__fix` (fuzzy name mismatches) / `mcp__opende__correct` (iterative) | Decides which fix to apply |
-| Fix verification | `altimate-dbt compile/build`, MCP re-check, `altimate-dbt execute` | — |
-| Data exploration (ref-based queries) | `altimate-dbt execute` (resolves `{{ ref() }}`/Jinja) | Interprets query results |
+| Fix verification | `{{RUNNER}} compile/build`, MCP re-check, `{{RUNNER}} show --inline` | — |
+| Data exploration (ref-based queries) | `{{RUNNER}} show --inline` (resolves `{{ ref() }}`/Jinja) | Interprets query results |
 | Data exploration (raw warehouse / fully-qualified tables) | `mcp__opende__execute` (raw SQL, safety-gated, no Jinja) | — |
 | Quick column/type check | `mcp__opende__schema_inspect` | — |
 

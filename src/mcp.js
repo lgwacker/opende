@@ -1,10 +1,8 @@
 #!/usr/bin/env node
-// altimate-core MCP server — exposes the deterministic (no-LLM, offline) engine
-// functions to Claude Code as native tools (mcp__opende__*). This is the
-// Claude-Code analog of the altimate agent's `altimate_core_*` tools.
-//
-// Schema-aware tools resolve a Schema from the dbt project (target/catalog.json)
-// automatically; callers may override with `schema_json` / `schema_yaml`.
+// opende MCP server — exposes the deterministic (no-LLM, offline) engine
+// functions to Claude Code as native tools (mcp__opende__*).
+// Schema-aware tools resolve a Schema from target/catalog.json automatically;
+// callers may override with `schema_json` / `schema_yaml`.
 // Backend/AI/telemetry functions (initSdk, reviewAi*) are never exposed.
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -61,44 +59,44 @@ const TOOLS = {
     run: (a) => call("extractGrain", [a.sql]) },
   extract_source_filters: { description: "Extract upstream WHERE filters from SQL.", shape: { sql },
     run: (a) => call("extractSourceFilters", [a.sql]) },
-  compare_queries: { description: "Structural diff between two queries.",
+  compare_queries: { description: "Structural AST diff between two queries (CTEs, joins, predicates, column order). Use for quick syntactic comparison. For a semantic equivalence proof use `check_equivalence`.",
     shape: { left_sql: z.string(), right_sql: z.string(), dialect },
     run: (a) => call("compareQueries", [a.left_sql, a.right_sql, a.dialect]) },
 
   // ── Lineage (schema optional) ──────────────────────────────────────────
-  column_lineage: { description: "Column-level lineage for a query (deterministic).",
+  column_lineage: { description: "Column-level lineage for a compiled SQL query — returns a per-column source/transform map. Pass compiled SQL only; raw Jinja ({{ ref() }}) produces incomplete results. For lineage across multiple queries use `track_lineage`.",
     shape: { sql, dialect, ...SCHEMA_OPTS, depth: z.string().optional() },
     run: (a) => call("columnLineage", [a.sql, a.dialect, schemaFrom(a), null, null, a.depth]) },
-  diff_lineage: { description: "Diff column-level lineage between two SQL versions (added/removed/modified edges).",
+  diff_lineage: { description: "Diff column-level lineage between two compiled SQL versions — returns added/removed/modified edges and affected_downstream columns. Pass compiled SQL only (no Jinja). Use before/after a model change to see exactly which column flows broke.",
     shape: { before_sql: z.string(), after_sql: z.string(), dialect, ...SCHEMA_OPTS, depth: z.string().optional() },
     run: (a) => call("diffLineage", [a.before_sql, a.after_sql, a.dialect, schemaFrom(a), null, null, a.depth]) },
-  track_lineage: { description: "Track lineage across multiple queries.",
+  track_lineage: { description: "Build a cross-query provenance graph across a pipeline of compiled SQL queries in sequence. Use when lineage spans more than one model (e.g. staging → intermediate → mart). For a single query use `column_lineage`.",
     shape: { queries: z.array(z.string()), ...SCHEMA_OPTS, depth: z.string().optional() },
     run: (a) => call("trackLineage", [a.queries, schemaFrom(a), a.depth]) },
 
   // ── Safety (no schema) ─────────────────────────────────────────────────
-  scan_sql: { description: "Scan SQL for injection vectors and destructive ops.", shape: { sql },
+  scan_sql: { description: "Scan SQL for injection vectors and destructive operations — returns detailed findings per risk. Use when you need to know WHY SQL is unsafe. For a quick boolean gate use `is_safe`.", shape: { sql },
     run: (a) => call("scanSql", [a.sql]) },
-  is_safe: { description: "Quick boolean: is this SQL safe to run?", shape: { sql },
+  is_safe: { description: "Quick boolean: is this SQL safe to run? Returns true/false. Use as a fast pre-execution gate. For detailed findings on what is unsafe use `scan_sql`.", shape: { sql },
     run: (a) => call("isSafe", [a.sql]) },
 
   // ── Quality (schema-aware) ─────────────────────────────────────────────
-  lint: { description: "Lint SQL for anti-patterns (26 rules), with severities and fixes.", shape: { sql, ...SCHEMA_OPTS },
+  lint: { description: "Lint SQL for style and anti-pattern violations (26 rules: SELECT *, missing aliases, naming, etc.) with severities and fix suggestions. For syntax/schema errors use `validate`; for semantic logic errors use `check_semantics`; for a combined A–F scorecard use `evaluate`.", shape: { sql, ...SCHEMA_OPTS },
     run: (a) => call("lint", [a.sql, schemaFrom(a)]) },
-  validate: { description: "Validate SQL — syntax errors and schema-resolution checks.", shape: { sql, ...SCHEMA_OPTS },
+  validate: { description: "Validate SQL for syntax errors and schema-resolution failures (unknown tables/columns). Run before executing. For style/anti-patterns use `lint`; for semantic logic errors use `check_semantics`.", shape: { sql, ...SCHEMA_OPTS },
     run: (a) => call("validate", [a.sql, schemaFrom(a)]) },
-  check_semantics: { description: "Semantic checks — wrong joins, cartesian products, NULL comparisons.", shape: { sql, ...SCHEMA_OPTS },
+  check_semantics: { description: "Detect semantic logic errors: wrong join types, cartesian products, NULL comparisons, fan-out risk. Run after `validate` passes. For style violations use `lint`.", shape: { sql, ...SCHEMA_OPTS },
     run: (a) => call("checkSemantics", [a.sql, schemaFrom(a)]) },
-  evaluate: { description: "Composite quality scorecard with an A–F grade.", shape: { sql, ...SCHEMA_OPTS },
+  evaluate: { description: "Composite quality scorecard (A–F grade) combining lint + validate + check_semantics results. Use for an overall quality signal or to detect a grade regression between two versions. For targeted checks run `lint`, `validate`, or `check_semantics` directly.", shape: { sql, ...SCHEMA_OPTS },
     run: (a) => call("evaluate", [a.sql, schemaFrom(a)]) },
   rewrite: { description: "Suggest optimized rewrites of a query.", shape: { sql, ...SCHEMA_OPTS },
     run: (a) => call("rewrite", [a.sql, schemaFrom(a)]) },
-  explain: { description: "Explain a query — plan steps, cost signals, lineage.", shape: { sql, ...SCHEMA_OPTS },
+  explain: { description: "Static offline analysis of a query: logical plan steps, cost signals (scan size, join type), and column lineage. No warehouse connection needed. For a live execution plan use `dbt show --inline 'EXPLAIN ...' --output json`.", shape: { sql, ...SCHEMA_OPTS },
     run: (a) => call("explain", [a.sql, schemaFrom(a)]) },
-  fix: { description: "Auto-fix SQL errors (fuzzy table/column matching).",
+  fix: { description: "Auto-fix SQL errors by fuzzy-matching wrong/misspelled table and column names against the schema. Use when the error is an unknown identifier. For logic/semantic errors that name-matching can't resolve use `correct`.",
     shape: { sql, ...SCHEMA_OPTS, max_iterations: z.number().optional() },
     run: (a) => call("fix", [a.sql, schemaFrom(a), a.max_iterations]) },
-  correct: { description: "Iterative propose-verify-refine correction of SQL.", shape: { sql, ...SCHEMA_OPTS },
+  correct: { description: "Iterative propose-verify-refine loop for SQL logic errors — slower than `fix` but handles semantic issues that fuzzy name-matching can't resolve. Use when `fix` fails or the error is in logic, not identifiers.", shape: { sql, ...SCHEMA_OPTS },
     run: (a) => call("correct", [a.sql, schemaFrom(a)]) },
   lint_diff: { description: "Lint only NEW findings introduced relative to a base SQL.",
     shape: { new_sql: z.string(), base_sql: z.string(), schema_context: z.string().optional() },
@@ -138,16 +136,16 @@ const TOOLS = {
     run: (a) => call("checkEquivalence", [a.sql_a, a.sql_b, schemaFrom(a), a.dialect]) },
   resolve_term: { description: "Fuzzy-match a business term against schema/glossary.", shape: { term: z.string(), ...SCHEMA_OPTS },
     run: (a) => call("resolveTerm", [a.term, schemaFrom(a)]) },
-  prune_schema: { description: "Return only the schema tables/columns relevant to a query.", shape: { sql, ...SCHEMA_OPTS },
+  prune_schema: { description: "Return only the schema tables/columns referenced by a specific query (removes noise). Use to reduce schema size before passing it to other tools. For full context-window token compression use `optimize_context`; for a query-scoped token estimate use `optimize_for_query`.", shape: { sql, ...SCHEMA_OPTS },
     run: (a) => call("pruneSchema", [a.sql, schemaFrom(a)]) },
-  optimize_for_query: { description: "Compress schema context to what a query needs (for context windows).", shape: { sql, ...SCHEMA_OPTS },
+  optimize_for_query: { description: "Compress schema to the tokens a specific query actually needs, with a token estimate. Query-scoped — narrows more aggressively than `prune_schema`. For full-schema compression not tied to a query use `optimize_context`.", shape: { sql, ...SCHEMA_OPTS },
     run: (a) => call("optimizeForQuery", [a.sql, schemaFrom(a)]) },
 
   // ── Review / completion / context ──────────────────────────────────────
   complete: { description: "Schema-aware SQL autocomplete at a cursor position (tables/columns/functions/keywords).",
     shape: { sql, cursor_pos: z.number().describe("0-indexed character offset of the cursor."), ...SCHEMA_OPTS },
     run: (a) => call("complete", [a.sql, a.cursor_pos, schemaFrom(a)]) },
-  optimize_context: { description: "Compress the schema for an LLM context window (progressive disclosure + token estimate).",
+  optimize_context: { description: "Compress the full schema for an LLM context window using progressive disclosure, with a token estimate. Not query-scoped — use `optimize_for_query` when you have a specific query to optimize for.",
     shape: { ...SCHEMA_OPTS },
     run: (a) => call("optimizeContext", [schemaFrom(a)]) },
   analyze_tags: { description: "Fast tag-based anti-pattern detection on SQL (no schema needed).",
@@ -164,14 +162,14 @@ const TOOLS = {
     run: (a) => call("parseDbtProject", [a.project_dir || DBT_DIR]) },
 
   // ── dbt config (no schema) ─────────────────────────────────────────────
-  dbt_config_lint: { description: "Lint dbt model config / Jinja.", shape: { sql },
+  dbt_config_lint: { description: "Lint a dbt model file for config/Jinja issues: missing required configs, invalid materializations, macro usage errors, Jinja syntax problems. Operates on raw model SQL (pre-compile, Jinja intact).", shape: { sql },
     run: (a) => call("dbtConfigLint", [a.sql]) },
   dbt_config_diff: { description: "Report dbt config changes between two model versions.",
     shape: { base_sql: z.string(), head_sql: z.string() },
     run: (a) => call("dbtConfigDiff", [a.base_sql, a.head_sql]) },
 
   // ── Warehouse / live data (Snowflake via dbt profile; safety-gated) ─────
-  execute: { description: "Run SQL against Snowflake (=sql_execute). DROP DATABASE/SCHEMA/TRUNCATE hard-blocked; non-SELECT needs allow_write; reads get an auto-LIMIT.",
+  execute: { description: "Run SQL against Snowflake. DROP DATABASE/SCHEMA/TRUNCATE hard-blocked; non-SELECT needs allow_write:true; reads get an auto-LIMIT. Does NOT resolve Jinja/{{ ref() }} — use `dbt show --inline` for dbt model queries.",
     shape: { sql, limit: z.number().optional(), allow_write: z.boolean().optional().describe("Permit non-SELECT (DROP DB/SCHEMA/TRUNCATE stay blocked).") },
     run: async (a) => wh.formatTable(await wh.execute(a.sql, { limit: a.limit ?? 100, allowWrite: a.allow_write })) },
   schema_inspect: { description: "Inspect a Snowflake table's columns/types (information_schema).",
@@ -183,9 +181,9 @@ const TOOLS = {
       const r = await wh.query(sql2);
       return wh.formatTable({ columns: r.columns, rows: r.rows.map((o) => r.columns.map((c) => o[c])), row_count: r.rows.length });
     } },
-  warehouse_list: { description: "List configured dbt/Snowflake targets (=warehouse_list).", shape: {},
+  warehouse_list: { description: "List configured dbt/Snowflake targets from profiles.yml (name, type, auth method, database). No credentials returned.", shape: {},
     run: () => listTargets({ projectDir: DBT_DIR }) },
-  data_diff: { description: "Row-by-row diff of two Snowflake tables/queries — deterministic, via altimate-core DataParitySession. Same-warehouse. NOTE: up to 5 sample diff rows are returned and shown to the model (avoid on regulated data, or use a where_clause).",
+  data_diff: { description: "Row-by-row diff of two Snowflake tables/queries (same-warehouse). Algorithms: auto|joindiff|hashdiff|profile|cascade. NOTE: up to 5 sample diff rows are returned and shown to the model — use `algorithm:\"profile\"` (column stats only, no row scan) on large or regulated tables, or add a where_clause to scope it.",
     shape: { source: z.string(), target: z.string(), key_columns: z.array(z.string()),
       extra_columns: z.array(z.string()).optional(), algorithm: z.string().optional().describe("auto|joindiff|hashdiff|profile|cascade"),
       where_clause: z.string().optional(), source_database: z.string().optional(), source_schema: z.string().optional(),
@@ -211,7 +209,7 @@ const TOOLS = {
     run: async (a) => { const r = await finops.schemaTags(a.object ?? null); return wh.formatTable({ columns: r.columns, rows: r.rows.map((o) => r.columns.map((c) => o[c])), row_count: r.rows.length }); } },
   schema_tags_list: { description: "List all defined Snowflake tags (ACCOUNT_USAGE.TAGS).", shape: {},
     run: async () => { const r = await finops.schemaTagsList(); return wh.formatTable({ columns: r.columns, rows: r.rows.map((o) => r.columns.map((c) => o[c])), row_count: r.rows.length }); } },
-  warehouse_test: { description: "Test Snowflake connectivity for the active dbt target (=warehouse_test).", shape: {},
+  warehouse_test: { description: "Test Snowflake connectivity for the active dbt target. Run this first when warehouse tools fail.", shape: {},
     run: () => wh.test({ projectDir: DBT_DIR }) },
   schema_cache_status: { description: "Status of the local schema index vs dbt artifacts (offline).", shape: {},
     run: () => cacheStatus({ projectDir: DBT_DIR, catalogPath: cfg.catalogPath, manifestPath: cfg.manifestPath, cacheDir: cfg.cacheDir }) },
@@ -219,7 +217,7 @@ const TOOLS = {
   // ── Schema index / search (offline, from dbt catalog/manifest) ──────────
   schema_index: { description: "(Re)build the local schema index from dbt catalog.json + manifest.json.", shape: {},
     run: () => buildIndex({ projectDir: DBT_DIR, catalogPath: cfg.catalogPath, manifestPath: cfg.manifestPath, cacheDir: cfg.cacheDir }) },
-  schema_search: { description: "Search indexed schema for tables/columns by keyword (=schema_search).",
+  schema_search: { description: "Search the local schema index for tables/columns by keyword (offline, from catalog.json). Use to discover table names before writing SQL. Run `schema_index` first if results are stale.",
     shape: { query: z.string(), limit: z.number().optional() },
     run: (a) => schemaSearch(a.query, { projectDir: DBT_DIR, catalogPath: cfg.catalogPath, manifestPath: cfg.manifestPath, cacheDir: cfg.cacheDir, limit: a.limit ?? 20 }) },
 

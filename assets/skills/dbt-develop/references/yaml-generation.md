@@ -3,8 +3,8 @@
 ## sources.yml — Define Raw Data Sources
 
 Generate from warehouse metadata using:
-```bash
-altimate-dbt columns-source --source <source_name> --table <table_name>
+```
+mcp__opende__schema_inspect {"table": "<table_name>", "schema_name": "<source_name>"}
 ```
 
 Template:
@@ -37,7 +37,7 @@ sources:
 
 Generate after building a model using:
 ```bash
-altimate-dbt columns --model <model_name>
+{{RUNNER}} show --select <model_name> --limit 0 --output json
 ```
 
 Template:

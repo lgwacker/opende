@@ -5,7 +5,7 @@ description: Train Claude Code on team standards from a document, style guide, U
 
 # Train
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) for CLI reference.
+See [OPENDE_CLI.md](../OPENDE_CLI.md) for CLI reference.
 
 ## How this maps (Option A)
 

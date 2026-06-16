@@ -8,7 +8,7 @@ Apply tests based on column name patterns:
 |---|---|
 | `*_id` (primary key) | `unique`, `not_null` |
 | `*_id` (foreign key) | `not_null`, `relationships: {to: ref('parent'), field: id}` |
-| `status`, `type`, `category` | `accepted_values` (discover values with `altimate-dbt column-values`) |
+| `status`, `type`, `category` | `accepted_values` (discover values with `{{RUNNER}} show --inline "SELECT DISTINCT <col>, count(*) FROM {{ ref('<name>') }} GROUP BY 1 ORDER BY 2 DESC" --limit 20`) |
 | `*_at`, `*_date`, `*_timestamp` | `not_null` (if event timestamp that should always exist) |
 | `is_*`, `has_*` (booleans) | `accepted_values: [true, false]` |
 | Columns in JOIN conditions | `not_null` (nulls cause dropped rows in INNER JOIN) |
@@ -58,7 +58,7 @@ Not every column needs every test. Prioritize:
 Before adding `accepted_values`, discover what actually exists:
 
 ```bash
-altimate-dbt column-values --model <name> --column status
+{{RUNNER}} show --inline "SELECT DISTINCT status, count(*) FROM {{ ref('<name>') }} GROUP BY 1 ORDER BY 2 DESC" --limit 20 --output json
 ```
 
 This prevents false test failures from values you didn't know about.

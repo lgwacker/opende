@@ -7,9 +7,9 @@ description: Create and modify dbt models — staging, intermediate, marts, incr
 
 ## Requirements
 **Agent:** Claude Code (file write access required)
-**Tools used:** bash (`altimate-dbt`, `git`), MCP (`mcp__opende__*`), Read, Glob, Write, Edit
+**Tools used:** bash (`dbt`, `git`), MCP (`mcp__opende__*`), Read, Glob, Write, Edit
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) for the full CLI reference.
+See [OPENDE_CLI.md](../OPENDE_CLI.md) for the full CLI reference.
 
 ## When to Use This Skill
 
@@ -35,15 +35,15 @@ Before writing any SQL:
 - Read the task requirements carefully
 - Identify which layer this model belongs to (staging, intermediate, mart)
 - Check existing models for naming conventions and patterns
-- **Check dependencies:** If `packages.yml` exists, check for `dbt_packages/` or `package-lock.yml`. Only run `altimate-dbt deps` if packages are declared but not yet installed.
+- **Check dependencies:** If `packages.yml` exists, check for `dbt_packages/` or `package-lock.yml`. Only run `{{RUNNER}} deps` if packages are declared but not yet installed.
 
 ```bash
-altimate-dbt info                           # project name, adapter type
-altimate-dbt parents --model <upstream>     # understand what feeds this model
-altimate-dbt children --model <downstream>  # understand what consumes it
+{{RUNNER}} debug                              # connection check, adapter info, missing deps
+{{RUNNER}} ls --select +1<upstream> --output json           # understand what feeds this model
+{{RUNNER}} ls --select <downstream>+1 --output json         # understand what consumes it
 ```
 
-**Check warehouse connection:** Read `profiles.yml` directly and run `altimate-dbt info` to discover the active profile, adapter type (Snowflake, BigQuery, Postgres, etc.), and target — essential for dialect-aware SQL.
+**Check warehouse connection:** Read `profiles.yml` directly and run `{{RUNNER}} debug` to discover the active profile, adapter type (Snowflake, BigQuery, Postgres, etc.), and target — essential for dialect-aware SQL.
 
 ### 2. Discover — Understand the Data Before Writing
 
@@ -64,11 +64,11 @@ altimate-dbt children --model <downstream>  # understand what consumes it
 - This is critical for JOINs — joining on the wrong grain causes fan-out or missing rows
 
 ```bash
-{{RUNNER}} show --model <name>                         # existing model columns
-{{RUNNER}} show-source --source <src> --table <tbl>    # source table columns
-altimate-dbt execute --query "SELECT count(*) FROM {{ ref('model') }}" --limit 1   # resolves ref()/Jinja
-altimate-dbt execute --query "SELECT * FROM {{ ref('model') }}" --limit 5
-altimate-dbt column-values --model <name> --column <col>    # sample values for key columns
+{{RUNNER}} show --select <name> --limit 10 --output json                       # existing model columns
+mcp__opende__schema_inspect {"table": "<tbl>", "schema_name": "<src>"}   # source table columns
+{{RUNNER}} show --inline "SELECT count(*) FROM {{ ref('model') }}" --limit 1 --output json   # resolves ref()/Jinja
+{{RUNNER}} show --inline "SELECT * FROM {{ ref('model') }}" --limit 5 --output json
+{{RUNNER}} show --inline "SELECT DISTINCT <col>, count(*) FROM {{ ref('<name>') }} GROUP BY 1 ORDER BY 2 DESC" --limit 20 --output json    # sample column values
 ```
 
 **Raw warehouse profiling** (use `mcp__opende__execute` for fully-qualified tables, `information_schema`, or when Jinja resolution is not needed — it does NOT resolve `{{ ref() }}`):
@@ -105,8 +105,8 @@ Never stop at writing the SQL. Always validate:
 
 **Build it:**
 ```bash
-altimate-dbt compile --model <name>    # catch Jinja errors; writes compiled SQL to target/
-altimate-dbt build --model <name>      # materialize + run tests
+{{RUNNER}} compile --select <name>    # catch Jinja errors; writes compiled SQL to target/
+{{RUNNER}} build --select <name>      # materialize + run tests
 ```
 
 **Run SQL quality checks on the compiled output** (`target/compiled/.../models/<name>.sql`):
@@ -124,9 +124,9 @@ Claude interprets findings from all three tools and decides what to fix — desc
 
 **Verify the output:**
 ```bash
-{{RUNNER}} show --model <name>    # confirm expected columns exist
-altimate-dbt execute --query "SELECT count(*) FROM {{ ref('<name>') }}" --limit 1
-altimate-dbt execute --query "SELECT * FROM {{ ref('<name>') }}" --limit 10
+{{RUNNER}} show --select <name> --limit 10 --output json    # confirm expected columns exist
+{{RUNNER}} show --inline "SELECT count(*) FROM {{ ref('<name>') }}" --limit 1 --output json
+{{RUNNER}} show --inline "SELECT * FROM {{ ref('<name>') }}" --limit 10 --output json
 ```
 - Do the columns match what schema.yml or the task expects?
 - Does the row count make sense? (no fan-out from bad joins, no missing rows)
@@ -136,24 +136,24 @@ altimate-dbt execute --query "SELECT * FROM {{ ref('<name>') }}" --limit 10
 ```
 mcp__opende__column_lineage  compiled SQL   # DETERMINISTIC — returns per-column source/transform map
 ```
-Pass the compiled SQL (from `target/compiled/.../models/<name>.sql`). Use `altimate-dbt parents/children/columns` for model-graph structure; `mcp__opende__column_lineage` for column-level flow.
+Pass the compiled SQL (from `target/compiled/.../models/<name>.sql`). Use `{{RUNNER}} ls` for model-graph structure; `mcp__opende__column_lineage` for column-level flow.
 
 **Check downstream impact** (when modifying an existing model):
 ```bash
-altimate-dbt children --model <name>                    # who depends on this?
-altimate-dbt build --model <name> --downstream          # rebuild downstream to catch breakage
+{{RUNNER}} ls --select <name>+1 --output json                    # who depends on this?
+{{RUNNER}} build --select <name>+                  # rebuild downstream to catch breakage
 ```
 
 ## How this maps (Option A)
 
 | What stays deterministic (CLI / MCP) | What Claude reasons |
 |--------------------------------------|---------------------|
-| `altimate-dbt compile/build/run/test/execute/columns/column-values/parents/children/info/deps` | Layer selection, SQL authoring, naming conventions |
+| `{{RUNNER}} compile/build/run/test/ls/deps` | Layer selection, SQL authoring, naming conventions |
+| `{{RUNNER}} show --inline` for Jinja-aware queries; `mcp__opende__execute` for raw warehouse queries | Interprets profiling results |
 | `mcp__opende__lint` + `validate` + `check_semantics` on compiled SQL | Interpreting findings, deciding fixes |
 | `mcp__opende__column_lineage` on compiled SQL | — (DETERMINISTIC, not Claude-derived) |
 | `mcp__opende__schema_search` — offline keyword search over indexed dbt schema | — |
 | `mcp__opende__schema_inspect` — live `information_schema` column fetch | — |
-| `mcp__opende__execute` — raw SQL on Snowflake (no Jinja/ref; use `altimate-dbt execute` when ref() is needed) | Interprets profiling results |
 | Reading `profiles.yml`, `target/manifest.json`, `*.yml` | Schema search / natural-language table discovery |
 | `git diff --name-only` | — |
 
@@ -161,18 +161,18 @@ Gate compiled files with `{{GATE_INVOCATION}} <files...>` before MCP calls. No `
 
 ## Iron Rules
 
-1. **Never write SQL without reading the source columns first.** Use `{{RUNNER}} show` or `{{RUNNER}} show-source`.
-2. **Never stop at compile.** Always `altimate-dbt build` to catch runtime errors.
+1. **Never write SQL without reading the source columns first.** Use `{{RUNNER}} show --select` or `mcp__opende__schema_inspect`.
+2. **Never stop at compile.** Always `{{RUNNER}} build --select` to catch runtime errors.
 3. **Match existing patterns.** Read 2-3 existing models in the same directory before writing.
 4. **One model, one purpose.** A staging model should not contain business logic. An intermediate model should not be materialized as a table unless it has consumers.
-5. **Fix ALL errors, not just yours.** After creating/modifying models, run a full `altimate-dbt build`. If ANY model fails — even pre-existing ones you didn't touch — fix them. Leave the project in a fully working state.
+5. **Fix ALL errors, not just yours.** After creating/modifying models, run a full `{{RUNNER}} build`. If ANY model fails — even pre-existing ones you didn't touch — fix them. Leave the project in a fully working state.
 
 ## Common Mistakes
 
 | Mistake | Fix |
 |---------|-----|
-| Writing SQL without checking column names | Run `{{RUNNER}} show` or `{{RUNNER}} show-source` first |
-| Stopping at `compile` — "it compiled, ship it" | Always `altimate-dbt build` to materialize and run tests |
+| Writing SQL without checking column names | Run `{{RUNNER}} show --select` or `mcp__opende__schema_inspect` first |
+| Stopping at `compile` — "it compiled, ship it" | Always `{{RUNNER}} build --select` to materialize and run tests |
 | Hardcoding table references instead of `{{ ref() }}` | Always use `{{ ref('model') }}` or `{{ source('src', 'table') }}` |
 | Creating a staging model with JOINs | Staging = 1:1 with source. JOINs belong in intermediate or mart |
 | Not checking existing naming conventions | Read existing models in the same directory first |
@@ -183,7 +183,8 @@ Gate compiled files with `{{GATE_INVOCATION}} <files...>` before MCP calls. No `
 
 | Guide | Use When |
 |-------|----------|
-| [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) | Full CLI reference for `altimate-dbt` and MCP tools |
+| [OPENDE_CLI.md](../OPENDE_CLI.md) | Full CLI reference for `dbt` and MCP tools |
+| [OPENDE_CLI.md](../OPENDE_CLI.md) | dbt CLI command reference |
 | [references/layer-patterns.md](references/layer-patterns.md) | Creating staging, intermediate, or mart models |
 | [references/medallion-architecture.md](references/medallion-architecture.md) | Organizing into bronze/silver/gold layers |
 | [references/incremental-strategies.md](references/incremental-strategies.md) | Converting to incremental materialization |

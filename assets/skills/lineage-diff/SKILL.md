@@ -1,13 +1,13 @@
 ---
 name: lineage-diff
-description: Compare column-level lineage between two versions of a SQL model to show added, removed, and changed data flow edges. Now fully deterministic via `mcp__opende__diff_lineage`; `altimate-dbt parents/children/columns` provide structural context.
+description: Compare column-level lineage between two versions of a SQL model to show added, removed, and changed data flow edges. Now fully deterministic via `mcp__opende__diff_lineage`; `{{RUNNER}} ls --select` provides structural graph context.
 ---
 
 # Lineage Diff
 
 ## Requirements
 **Model:** Claude (presents findings, contextual impact assessment)
-**CLI:** `altimate-dbt compile`, `altimate-dbt parents`, `altimate-dbt children`, `{{RUNNER}} show`, `bash` (git)
+**CLI:** `{{RUNNER}} compile --select`, `{{RUNNER}} ls --select`, `{{RUNNER}} show`, `bash` (git)
 **MCP:** `mcp__opende__diff_lineage`, `mcp__opende__column_lineage`
 
 ## Workflow
@@ -30,13 +30,13 @@ If the user provides both versions directly in the conversation, skip the git st
 Jinja references must be resolved for accurate column tracing. Compile the current version:
 
 ```bash
-altimate-dbt compile --model <name>
+{{RUNNER}} compile --select <name>
 # compiled SQL in target/compiled/<project>/<path>.sql
 ```
 
 For the old version, if it differs structurally from HEAD, write it to a temp file and run:
 ```bash
-altimate-dbt compile-query --query "$(cat /tmp/old_model.sql)"
+{{RUNNER}} show --inline "$(cat /tmp/old_model.sql)" --output json
 ```
 
 ### 3. Get Structural Context
@@ -44,9 +44,9 @@ altimate-dbt compile-query --query "$(cat /tmp/old_model.sql)"
 Fetch upstream and downstream models to understand scope of impact:
 
 ```bash
-altimate-dbt parents --model <name>
-altimate-dbt children --model <name>
-{{RUNNER}} show --model <name>
+{{RUNNER}} ls --select +1<name> --output json
+{{RUNNER}} ls --select <name>+1 --output json
+{{RUNNER}} show --select <name> --limit 10 --output json
 ```
 
 ### 4. Compute Column-Level Lineage Diff (Deterministic)
@@ -90,7 +90,7 @@ Lineage Diff: <model_name>
   UNCHANGED: 5 edges
 
 Downstream impact:
-  Models referencing <model_name>: [list from altimate-dbt children]
+  Models referencing <model_name>: [list from {{RUNNER}} ls --select <model_name>+1]
   Affected downstream (from diff_lineage): [affected_downstream list]
   Check whether removed edges break any downstream consumers.
 
@@ -104,8 +104,8 @@ Impact: 1 new edge, 1 removed edge, 1 modified edge
 
 ## How this maps (Option A)
 
-**Fully deterministic:** Column-level edge extraction and diff computation use `mcp__opende__diff_lineage` (pass `before_sql`/`after_sql` as compiled SQL). The engine returns `added_columns`, `removed_columns`, `modified_columns`, and `affected_downstream` without any LLM reasoning. `altimate-dbt compile` resolves Jinja; `altimate-dbt parents/children/columns` supply structural graph context. For single-version lineage, `mcp__opende__column_lineage` is used instead.
+**Fully deterministic:** Column-level edge extraction and diff computation use `mcp__opende__diff_lineage` (pass `before_sql`/`after_sql` as compiled SQL). The engine returns `added_columns`, `removed_columns`, `modified_columns`, and `affected_downstream` without any LLM reasoning. `{{RUNNER}} compile --select` resolves Jinja; `{{RUNNER}} ls --select` supplies structural graph context. For single-version lineage, `mcp__opende__column_lineage` is used instead.
 
 **Claude-reasoned:** Presenting findings in readable prose and contextual impact assessment for the specific PR or deployment context.
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md).
+See [OPENDE_CLI.md](../OPENDE_CLI.md).

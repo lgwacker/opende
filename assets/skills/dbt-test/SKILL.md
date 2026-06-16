@@ -7,9 +7,9 @@ description: Add schema tests, unit tests, and data quality checks to dbt models
 
 ## Requirements
 **Agent:** Claude Code (file write access required)
-**Tools used:** bash (`altimate-dbt`), MCP (`mcp__opende__generate_tests`, `mcp__opende__validate`, `mcp__opende__lint`), Read, Glob, Write, Edit
+**Tools used:** bash (`dbt`), MCP (`mcp__opende__generate_tests`, `mcp__opende__validate`, `mcp__opende__lint`), Read, Glob, Write, Edit
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) for the full CLI reference.
+See [OPENDE_CLI.md](../OPENDE_CLI.md) for the full CLI reference.
 
 ## When to Use This Skill
 
@@ -41,8 +41,8 @@ Option 2 requires explicit user confirmation. Do not silently weaken tests.
 ### 1. Discover Columns
 
 ```bash
-{{RUNNER}} show --model <name>
-altimate-dbt column-values --model <name> --column <col>
+{{RUNNER}} show --select <name> --limit 10 --output json
+{{RUNNER}} show --inline "SELECT DISTINCT <col>, count(*) FROM {{ ref('<name>') }} GROUP BY 1 ORDER BY 2 DESC" --limit 20 --output json
 ```
 
 ### 2. Read Existing Tests
@@ -56,10 +56,10 @@ glob models/**/*schema*.yml models/**/*_models.yml
 
 1. Compile the model to get plain SQL:
    ```bash
-   altimate-dbt compile --model <name>
+   {{RUNNER}} compile --select <name>
    # compiled SQL lands in target/compiled/.../models/<name>.sql
    ```
-2. Read the compiled SQL and the column list (`{{RUNNER}} show`).
+2. Read the compiled SQL and the column list (`{{RUNNER}} show --select`).
 
 3. **Gate check** — Run the gate before invoking MCP tools on any file:
    ```bash
@@ -74,7 +74,7 @@ glob models/**/*schema*.yml models/**/*_models.yml
 
 5. Claude maps `test_cases[]` to dbt schema tests:
    - Column names and types → `not_null`, `unique`
-   - `altimate-dbt column-values` output → `accepted_values`
+   - `{{RUNNER}} show --inline` distinct values output → `accepted_values`
    - FK references visible in the SQL → `relationships`
    - Business rules stated in the task or existing YAML descriptions
 
@@ -96,8 +96,8 @@ Claude reads the findings and addresses any errors or warnings that affect test 
 ### 6. Run Tests
 
 ```bash
-altimate-dbt test --model <name>     # run tests for this model
-altimate-dbt build --model <name>    # build + test together
+{{RUNNER}} test --select <name>     # run tests for this model
+{{RUNNER}} build --select <name>    # build + test together
 ```
 
 ## Unit Test Workflow
@@ -127,10 +127,10 @@ unit_tests:
 
 | What stays deterministic (CLI / MCP) | What Claude reasons |
 |--------------------------------------|---------------------|
-| `altimate-dbt compile/test/build/columns/column-values` | — |
+| `{{RUNNER}} compile/test/build/show` | — |
 | `mcp__opende__generate_tests` on compiled SQL | Maps `test_cases[]` to dbt schema-test YAML |
 | `mcp__opende__validate` + `mcp__opende__lint` on compiled SQL | Selects which findings suggest missing tests |
-| `altimate-dbt test --model <name>` (fail output) | Diagnosing root cause of test failures |
+| `{{RUNNER}} test --select <name>` (fail output) | Diagnosing root cause of test failures |
 
 ## Common Mistakes
 
@@ -138,7 +138,7 @@ unit_tests:
 |---------|-----|
 | Testing every column with `not_null` | Only test columns that should never be null. Think about what NULL means. |
 | Missing `unique` test on primary keys | Every primary key needs `unique` + `not_null` |
-| `accepted_values` with incomplete list | Use `altimate-dbt column-values` to discover real values first |
+| `accepted_values` with incomplete list | Use `{{RUNNER}} show --inline` to discover real values first |
 | Modifying a test to make it pass | Understand WHY it fails first. The test might be right. |
 | No `relationships` test on foreign keys | Add `relationships: {to: ref('parent'), field: parent_id}` |
 | Unit testing trivial logic | Don't unit test `SELECT a, b FROM source`. Test calculations and business logic. |
@@ -148,7 +148,8 @@ unit_tests:
 
 | Guide | Use When |
 |-------|----------|
-| [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) | Full CLI reference for `altimate-dbt` and MCP tools |
+| [OPENDE_CLI.md](../OPENDE_CLI.md) | Full CLI reference for `dbt` and MCP tools |
+| [OPENDE_CLI.md](../OPENDE_CLI.md) | dbt CLI command reference |
 | [references/schema-test-patterns.md](references/schema-test-patterns.md) | Adding schema.yml tests by column pattern |
 | [references/unit-test-guide.md](references/unit-test-guide.md) | Writing dbt unit tests |
 | [references/custom-tests.md](references/custom-tests.md) | Creating generic or singular tests |

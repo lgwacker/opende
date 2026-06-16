@@ -6,13 +6,13 @@ Runtime errors happen when compiled SQL fails to execute against the database.
 
 ```bash
 # First compile to rule out Jinja issues
-altimate-dbt compile --model <name>
+{{RUNNER}} compile --select <name>
 
 # Then try to build
-altimate-dbt build --model <name>
+{{RUNNER}} build --select <name>
 
 # Probe the data directly
-altimate-dbt execute --query "<diagnostic_sql>" --limit 10
+{{RUNNER}} show --inline "<diagnostic_sql>" --limit 10 --output json
 ```
 
 ## Common Runtime Errors
@@ -23,7 +23,7 @@ altimate-dbt execute --query "<diagnostic_sql>" --limit 10
 
 **Fix**:
 ```bash
-altimate-dbt columns --model <upstream_model>    # check what columns actually exist
+{{RUNNER}} show --select <upstream_model> --limit 0 --output json    # check what columns actually exist
 ```
 Update the column name in the SQL.
 
@@ -33,7 +33,7 @@ Update the column name in the SQL.
 
 **Fix**:
 ```bash
-altimate-dbt build --model <upstream_model>      # build the dependency first
+{{RUNNER}} build --select <upstream_model>      # build the dependency first
 ```
 
 ### `Database Error: division by zero`
@@ -65,7 +65,7 @@ altimate-dbt build --model <upstream_model>      # build the dependency first
 
 ## General Approach
 
-1. Read the compiled SQL: `altimate-dbt compile --model <name>`
+1. Read the compiled SQL: `{{RUNNER}} compile --select <name>`
 2. Try running a simplified version of the query directly
-3. Check upstream columns: `altimate-dbt columns --model <upstream>`
+3. Check upstream columns: `{{RUNNER}} show --select <upstream> --limit 0`
 4. Add diagnostic queries to understand the data shape

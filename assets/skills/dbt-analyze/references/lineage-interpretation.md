@@ -43,8 +43,8 @@ The source column feeds a derived boolean. The relationship is logical, not dire
 ## Reading the DAG
 
 ```bash
-altimate-dbt parents --model <name>     # what this model depends on
-altimate-dbt children --model <name>    # what depends on this model
+{{RUNNER}} ls --select +1<name> --output json     # what this model depends on
+{{RUNNER}} ls --select <name>+1 --output json     # what depends on this model
 ```
 
 A model with many children has high blast radius. A model with many parents has high complexity.

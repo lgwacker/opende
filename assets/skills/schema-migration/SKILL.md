@@ -1,13 +1,13 @@
 ---
 name: schema-migration
-description: Analyze DDL migrations for data loss risks — type narrowing, missing defaults, dropped constraints, breaking column changes. Now fully deterministic via `mcp__opende__analyze_migration` and `mcp__opende__diff_schemas`; `altimate-dbt children` maps downstream impact.
+description: Analyze DDL migrations for data loss risks — type narrowing, missing defaults, dropped constraints, breaking column changes. Now fully deterministic via `mcp__opende__analyze_migration` and `mcp__opende__diff_schemas`; `{{RUNNER}} ls --select` maps downstream impact.
 ---
 
 # Schema Migration Analysis
 
 ## Requirements
 **Model:** Claude (presents findings, contextual remediation advice)
-**CLI:** `altimate-dbt children`, `{{RUNNER}} show`, `bash` (git)
+**CLI:** `{{RUNNER}} ls --select`, `{{RUNNER}} show`, `bash` (git)
 **MCP:** `mcp__opende__analyze_migration`, `mcp__opende__diff_schemas`, `mcp__opende__import_ddl`
 
 ## When to Use This Skill
@@ -27,7 +27,7 @@ description: Analyze DDL migrations for data loss risks — type narrowing, miss
 1. Never mark a column drop as safe without calling out that existing non-NULL values will be lost.
 2. Type narrowing (VARCHAR(200) → VARCHAR(50)) is ALWAYS flagged — even if current data fits.
 3. NOT NULL column additions without DEFAULT always fail on existing rows in SQL databases.
-4. Cross-reference downstream models via `altimate-dbt children` before declaring any breaking change safe.
+4. Cross-reference downstream models via `{{RUNNER}} ls --select <name>+` before declaring any breaking change safe.
 
 ## Workflow
 
@@ -81,7 +81,7 @@ To convert a raw DDL file into a schema representation for `diff_schemas`, first
 ### 4. Check Downstream Impact
 
 ```bash
-altimate-dbt children --model <name>
+{{RUNNER}} ls --select <name>+1 --output json
 ```
 
 For each downstream model that exists, verify it doesn't reference a dropped or renamed column. Cross-reference with the `affected_downstream` output from `mcp__opende__diff_lineage` if a lineage diff was also run (see `lineage-diff` skill).
@@ -114,7 +114,7 @@ SAFE CHANGES (3):
 
 Rollback SQL: [from analyze_migration.rollback_sql]
 
-Downstream models affected: [list from altimate-dbt children]
+Downstream models affected: [list from {{RUNNER}} ls --select <name>+1]
 
 Recommendation: DO NOT apply without addressing BREAKING changes.
   1. Back up discount_amount data before dropping
@@ -130,8 +130,8 @@ Recommendation: DO NOT apply without addressing BREAKING changes.
 
 ## How this maps (Option A)
 
-**Fully deterministic:** `mcp__opende__analyze_migration` performs all data-loss risk categorization, type-narrowing detection, constraint analysis, and column-rename detection — returning `overall_risk` (safe/caution/dangerous/destructive), `findings[]`, and `rollback_sql`. `mcp__opende__diff_schemas` identifies breaking changes between two schema versions; `mcp__opende__import_ddl` converts raw DDL into a schema object for use with `diff_schemas`. `altimate-dbt children` maps downstream consumers of a changed model.
+**Fully deterministic:** `mcp__opende__analyze_migration` performs all data-loss risk categorization, type-narrowing detection, constraint analysis, and column-rename detection — returning `overall_risk` (safe/caution/dangerous/destructive), `findings[]`, and `rollback_sql`. `mcp__opende__diff_schemas` identifies breaking changes between two schema versions; `mcp__opende__import_ddl` converts raw DDL into a schema object for use with `diff_schemas`. `{{RUNNER}} ls --select <name>+1` maps downstream consumers of a changed model.
 
 **Claude-reasoned:** Presenting findings in readable prose and contextual remediation advice tailored to the specific migration and deployment context.
 
-See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md).
+See [OPENDE_CLI.md](../OPENDE_CLI.md).

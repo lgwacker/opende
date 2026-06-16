@@ -103,8 +103,8 @@ unit_tests:
 ## Running Unit Tests
 
 ```bash
-altimate-dbt test --model <name>          # runs all tests including unit tests
-altimate-dbt build --model <name>         # build + test
+{{RUNNER}} test --select <name>          # runs all tests including unit tests
+{{RUNNER}} build --select <name>         # build + test
 ```
 
 ## Test-Driven Development Pattern
