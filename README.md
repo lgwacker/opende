@@ -24,7 +24,7 @@ server and Claude-Code skill set, with zero altimate agent involvement.
 - **MCP server** (`opende-mcp`) exposing **64 deterministic tools** (`mcp__opende__*`):
   transpile/lint/validate/check_semantics/evaluate, column_lineage/diff_lineage,
   classify_pii/check_query_pii, analyze_migration/diff_schemas, generate_tests,
-  check_equivalence, `dbt_pr_review` (signed APPROVE/COMMENT/REQUEST_CHANGES verdict),
+  `check_equivalence` (optional `dialect` hint for Snowflake/BigQuery/etc. syntax; honors `decidable` flag), `dbt_pr_review` (signed APPROVE/COMMENT/REQUEST_CHANGES verdict),
   `schema_verify` (column-shape contract), `impact_analysis` (DAG blast radius), warehouse +
   finops tools (Snowflake), and more.
 - **Edit-time gate** (`opende-gate`) — render-then-analyze; lints compiled SQL, skips
@@ -67,6 +67,16 @@ All paths resolve from flags → env → auto-detect (`dbt_project.yml` upward) 
 Claude Code today. The generator is adapter-based (`src/cli/adapters/`) — opencode/Cursor are a
 thin future addition (MCP + AGENTS.md are already portable; only the skills/agents/gate wiring
 differs).
+
+## Development
+
+```bash
+npm test                  # all 228 tests (unit + integration)
+npm run test:unit         # pure-JS tests only (~120 ms, no engine)
+npm run test:integration  # real altimate-core calls + gate subprocess tests
+```
+
+Requires Node ≥ 18. Uses the built-in `node:test` runner — no extra dependencies.
 
 ## Attribution & license
 
