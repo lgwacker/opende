@@ -113,6 +113,7 @@ const modelName = (relpath) => path.basename(relpath, ".sql");
 // ── equivalence verdict normalizer (defensive across core result shapes) ─────
 function equivalenceVerdict(r) {
   if (!r || typeof r !== "object") return "unknown";
+  if (r.decidable === false) return "unknown";
   if (typeof r.equivalent === "boolean") return r.equivalent ? "equivalent" : "different";
   if (typeof r.is_equivalent === "boolean") return r.is_equivalent ? "equivalent" : "different";
   const s = lower(r.status || r.result || r.verdict);
@@ -177,10 +178,10 @@ async function gradeRegressionLane({ findings, baseEngine, headEngine, schema, f
   } catch { /* lane degrade */ }
 }
 
-async function equivalenceLane({ findings, baseEngine, headEngine, schema, file, model }) {
+async function equivalenceLane({ findings, baseEngine, headEngine, schema, file, model, dialect }) {
   if (!baseEngine || !headEngine || hasJinja(baseEngine) || hasJinja(headEngine)) return;
   try {
-    const r = await call("checkEquivalence", [baseEngine, headEngine, schema]);
+    const r = await call("checkEquivalence", [baseEngine, headEngine, schema, dialect]);
     const v = equivalenceVerdict(r);
     if (v === "different") {
       findings.push(makeFinding({ file, model, severity: "critical", category: "semantic_change", title: "Rewrite is NOT equivalent to the base", body: "The engine found a counterexample — this change alters results. Confirm intent.", ruleKey: "equivalence", evidence: { tool: "check_equivalence", result: r } }));
