@@ -108,4 +108,4 @@ Impact: 1 new edge, 1 removed edge, 1 modified edge
 
 **Claude-reasoned:** Presenting findings in readable prose and contextual impact assessment for the specific PR or deployment context.
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md).
+See [REFERENCE.md](../REFERENCE.md).

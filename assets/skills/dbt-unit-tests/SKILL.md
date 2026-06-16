@@ -5,7 +5,7 @@ description: Generate dbt unit tests for any model — seeds test scenarios via 
 
 # dbt Unit Test Generation
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md) for full CLI reference.
+See [REFERENCE.md](../REFERENCE.md) for full CLI reference.
 
 ## When to Use This Skill
 

@@ -134,4 +134,4 @@ Recommendation: DO NOT apply without addressing BREAKING changes.
 
 **Claude-reasoned:** Presenting findings in readable prose and contextual remediation advice tailored to the specific migration and deployment context.
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md).
+See [REFERENCE.md](../REFERENCE.md).

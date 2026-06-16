@@ -5,7 +5,7 @@ description: Show what Claude Code has learned — patterns, rules, glossary, an
 
 # Training Status
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md) for CLI reference.
+See [REFERENCE.md](../REFERENCE.md) for CLI reference.
 
 ## How this maps (Option A)
 

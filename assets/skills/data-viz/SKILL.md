@@ -5,7 +5,7 @@ description: Build modern, interactive data visualizations and dashboards using 
 
 # AI-First Data Visualization
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md) for CLI reference.
+See [REFERENCE.md](../REFERENCE.md) for CLI reference.
 
 ## How this maps (Option A)
 

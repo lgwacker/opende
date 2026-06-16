@@ -5,7 +5,7 @@ description: Debug dbt errors — compilation failures, runtime database errors,
 
 # dbt Troubleshooting
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md) for full CLI reference.
+See [REFERENCE.md](../REFERENCE.md) for full CLI reference.
 
 ## When to Use This Skill
 

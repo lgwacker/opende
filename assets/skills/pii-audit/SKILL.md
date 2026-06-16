@@ -154,4 +154,4 @@ Recommendations:
 
 **Claude-reasoned:** Report synthesis, contextual remediation advice, and reviewing low-confidence classify_pii results where business context matters.
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md).
+See [REFERENCE.md](../REFERENCE.md).

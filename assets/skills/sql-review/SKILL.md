@@ -105,4 +105,4 @@ When reviewing multiple files (e.g., all changed SQL in a PR), present a summary
 
 **Claude-reasoned:** Presenting findings in readable prose, deciding which issues are blockers for a given PR context, and suggesting remediation wording.
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md).
+See [REFERENCE.md](../REFERENCE.md).

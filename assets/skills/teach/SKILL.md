@@ -5,7 +5,7 @@ description: Teach Claude Code a reusable pattern by showing it an example file 
 
 # Teach
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md) for CLI reference.
+See [REFERENCE.md](../REFERENCE.md) for CLI reference.
 
 ## How this maps (Option A)
 

@@ -9,7 +9,7 @@ description: Create and modify dbt models — staging, intermediate, marts, incr
 **Agent:** Claude Code (file write access required)
 **Tools used:** bash (`dbt`, `git`), MCP (`mcp__opende__*`), Read, Glob, Write, Edit
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md) for the full CLI reference.
+See [REFERENCE.md](../REFERENCE.md) for the full CLI reference.
 
 ## When to Use This Skill
 
@@ -183,8 +183,8 @@ Gate compiled files with `{{GATE_INVOCATION}} <files...>` before MCP calls. No `
 
 | Guide | Use When |
 |-------|----------|
-| [OPENDE_CLI.md](../OPENDE_CLI.md) | Full CLI reference for `dbt` and MCP tools |
-| [OPENDE_CLI.md](../OPENDE_CLI.md) | dbt CLI command reference |
+| [REFERENCE.md](../REFERENCE.md) | Full CLI reference for `dbt` and MCP tools |
+| [REFERENCE.md](../REFERENCE.md) | dbt CLI command reference |
 | [references/layer-patterns.md](references/layer-patterns.md) | Creating staging, intermediate, or mart models |
 | [references/medallion-architecture.md](references/medallion-architecture.md) | Organizing into bronze/silver/gold layers |
 | [references/incremental-strategies.md](references/incremental-strategies.md) | Converting to incremental materialization |

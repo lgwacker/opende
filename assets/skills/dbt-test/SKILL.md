@@ -9,7 +9,7 @@ description: Add schema tests, unit tests, and data quality checks to dbt models
 **Agent:** Claude Code (file write access required)
 **Tools used:** bash (`dbt`), MCP (`mcp__opende__generate_tests`, `mcp__opende__validate`, `mcp__opende__lint`), Read, Glob, Write, Edit
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md) for the full CLI reference.
+See [REFERENCE.md](../REFERENCE.md) for the full CLI reference.
 
 ## When to Use This Skill
 
@@ -148,8 +148,8 @@ unit_tests:
 
 | Guide | Use When |
 |-------|----------|
-| [OPENDE_CLI.md](../OPENDE_CLI.md) | Full CLI reference for `dbt` and MCP tools |
-| [OPENDE_CLI.md](../OPENDE_CLI.md) | dbt CLI command reference |
+| [REFERENCE.md](../REFERENCE.md) | Full CLI reference for `dbt` and MCP tools |
+| [REFERENCE.md](../REFERENCE.md) | dbt CLI command reference |
 | [references/schema-test-patterns.md](references/schema-test-patterns.md) | Adding schema.yml tests by column pattern |
 | [references/unit-test-guide.md](references/unit-test-guide.md) | Writing dbt unit tests |
 | [references/custom-tests.md](references/custom-tests.md) | Creating generic or singular tests |

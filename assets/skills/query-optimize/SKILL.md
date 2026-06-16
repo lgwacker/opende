@@ -122,4 +122,4 @@ Analyze SQL queries for performance issues and suggest concrete optimizations in
 | Equivalence verification | `mcp__opende__check_equivalence` (deterministic) | Claude flags divergences |
 | Execution plan | `mcp__opende__explain` (deterministic); optional `{{RUNNER}} show --inline` live EXPLAIN | Claude interprets cost_signals |
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md).
+See [REFERENCE.md](../REFERENCE.md).

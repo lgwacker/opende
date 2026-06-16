@@ -9,7 +9,7 @@ description: Analyze downstream impact of dbt model changes using the dependency
 **Agent:** Claude Code (read-only analysis; no file writes needed)
 **Tools used:** bash (`dbt`, `git`), MCP (`mcp__opende__*`), Read, Glob
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md) for the full CLI reference.
+See [REFERENCE.md](../REFERENCE.md) for the full CLI reference.
 
 ## When to Use This Skill
 
@@ -174,6 +174,6 @@ Gate compiled files with `{{GATE_INVOCATION}} <files...>` before MCP calls. No `
 
 | Guide | Use When |
 |-------|----------|
-| [OPENDE_CLI.md](../OPENDE_CLI.md) | Full CLI reference for `dbt` and MCP tools |
-| [OPENDE_CLI.md](../OPENDE_CLI.md) | dbt CLI command reference |
+| [REFERENCE.md](../REFERENCE.md) | Full CLI reference for `dbt` and MCP tools |
+| [REFERENCE.md](../REFERENCE.md) | dbt CLI command reference |
 | [references/lineage-interpretation.md](references/lineage-interpretation.md) | Understanding lineage output |

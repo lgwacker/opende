@@ -9,7 +9,7 @@ description: Document dbt models and columns in schema.yml with business context
 **Agent:** Claude Code (file write access required)
 **Tools used:** bash (`dbt`), MCP (`mcp__opende__*`), Read, Glob, Write, Edit
 
-See [OPENDE_CLI.md](../OPENDE_CLI.md) for the full CLI reference.
+See [REFERENCE.md](../REFERENCE.md) for the full CLI reference.
 
 ## When to Use This Skill
 
@@ -115,6 +115,6 @@ Gate compiled files with `{{GATE_INVOCATION}} <files...>` before MCP calls. Desc
 
 | Guide | Use When |
 |-------|----------|
-| [OPENDE_CLI.md](../OPENDE_CLI.md) | Full CLI reference for `dbt` and MCP tools |
-| [OPENDE_CLI.md](../OPENDE_CLI.md) | dbt CLI command reference |
+| [REFERENCE.md](../REFERENCE.md) | Full CLI reference for `dbt` and MCP tools |
+| [REFERENCE.md](../REFERENCE.md) | dbt CLI command reference |
 | [references/documentation-standards.md](references/documentation-standards.md) | Writing high-quality descriptions |
