@@ -5,6 +5,44 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.1.3] — 2026-06-16
+
+### Changed
+- **Skill files no longer reference `altimate-dbt`** — all commands replaced with the
+  standard `dbt` CLI (`{{RUNNER}}` token) which opende actually ships against:
+  - `altimate-dbt execute` → `{{RUNNER}} show --inline` (dbt ≥ 1.5 Jinja-aware runner)
+  - `altimate-dbt parents/children` → `{{RUNNER}} ls --select +1<m>` / `<m>+1`
+  - `altimate-dbt columns-source` → `mcp__opende__schema_inspect`
+  - `altimate-dbt doctor/info` → `{{RUNNER}} debug`
+  - All build/compile/run/test/deps commands now use `{{RUNNER}}` with `--select`
+- **`ALTIMATE_CLI.md` renamed to `OPENDE_CLI.md`** and rewritten; Surface 3 now
+  documents the standard dbt CLI instead of the altimate-code-specific wrapper.
+- **6 duplicate `altimate-dbt-commands.md` reference files eliminated** — each skill
+  had an identical copy; all references now point to the single `OPENDE_CLI.md`.
+- **`--output json` added** to all `{{RUNNER}} ls` and `{{RUNNER}} show` invocations
+  in skill files (`dbt ls` returns JSONL with node metadata; `dbt show` returns rows
+  in `data.preview`).
+- **Wrong dbt flags fixed** in skill files: `--model` → `--select`; `show-source`
+  (non-existent) → `mcp__opende__schema_inspect`.
+
+### Improved
+- **MCP tool descriptions** in `src/mcp.js` — disambiguated overlapping tools and
+  clarified semantics throughout:
+  - `compare_queries` vs `check_equivalence`: structural AST diff vs semantic proof
+  - `fix` vs `correct`: identifier fuzzy-match vs iterative logic correction
+  - `prune_schema` / `optimize_for_query` / `optimize_context`: each now states its
+    scope and cross-references the alternatives
+  - `lint` / `validate` / `check_semantics` / `evaluate`: when to use each vs the gate
+  - `is_safe` vs `scan_sql`: boolean gate vs detailed findings
+  - `column_lineage`, `diff_lineage`, `track_lineage`: "compiled SQL only" note added
+  - `explain`: clarified as static offline analysis (not a live warehouse EXPLAIN)
+  - `execute`: notes it does not resolve Jinja/`{{ ref() }}`
+  - `dbt_config_lint`: now describes what it actually checks
+  - Internal alias tags (`=sql_execute`, `=warehouse_list`) and `DataParitySession`
+    implementation detail removed from user-facing descriptions
+
+---
+
 ## [0.1.2] — 2026-06-16
 
 ### Fixed
