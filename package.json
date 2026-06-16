@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "description": "A stripped extract of altimate-code that brings its deterministic SQL intelligence (Rust core engine, signed PR-review verdict, gate, skills, agent personas) to model-locked subscription harnesses (Claude Code, Cursor, etc.) where companies only allow their own subscription model — no second LLM, no extra API key, no altimate agent ever invoked.",
   "type": "module",
+  "scripts": {
+    "test": "node --test --test-reporter=spec",
+    "test:unit": "node --test --test-reporter=spec test/unit/*.test.js",
+    "test:integration": "node --test --test-reporter=spec test/integration/*.test.js"
+  },
   "license": "MIT",
   "repository": { "type": "git", "url": "git+https://github.com/lgwacker/opende.git" },
   "bin": {
