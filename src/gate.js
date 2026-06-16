@@ -188,7 +188,7 @@ async function main() {
       all = all.concat(findings);
       if (grade) grades.push(`${path.basename(f)}=${grade}`);
     } catch (e) {
-      process.stderr.write(`altimate gate: error checking ${f}: ${e.message}\n`);
+      process.stderr.write(`opende gate: error checking ${f}: ${e.message}\n`);
       if (!hookMode) return 1;
     }
   }
@@ -200,14 +200,14 @@ async function main() {
   if (hookMode) {
     if (blocking.length) {
       process.stderr.write(
-        `altimate SQL gate BLOCKED this edit — deterministic findings at/above '${failOn}':\n` +
+        `opende SQL gate BLOCKED this edit — deterministic findings at/above '${failOn}':\n` +
           formatReport(blocking) + "\nFix these before continuing.\n"
       );
       return 2;
     }
     if (advisory.length) {
       process.stdout.write(JSON.stringify({
-        hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: "altimate SQL gate (advisory):\n" + formatReport(advisory) },
+        hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: "opende SQL gate (advisory):\n" + formatReport(advisory) },
       }));
     }
     return 0;
@@ -216,7 +216,7 @@ async function main() {
   if (all.length) console.log(formatReport(all));
   const errors = all.filter((f) => f.severity === "error").length;
   const warnings = all.filter((f) => f.severity === "warning").length;
-  console.log(`\naltimate-core: ${errors} error(s), ${warnings} warning(s) across ${files.length} file(s).` +
+  console.log(`\nopende: ${errors} error(s), ${warnings} warning(s) across ${files.length} file(s).` +
     (grades.length ? ` Grades: ${grades.join(", ")}.` : ""));
   if (blocking.length) { console.log(`FAILED (--fail-on ${failOn})`); return 1; }
   return 0;

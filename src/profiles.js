@@ -53,7 +53,7 @@ export function loadProfile({ projectDir, target } = {}) {
   const missing = [];
   const o = resolveEnvVars(rawTarget, missing);
   if (String(o.type || "").toLowerCase() !== "snowflake") {
-    throw new Error(`altimate-mcp warehouse layer supports Snowflake only; target '${tgt}' is type '${o.type}'.`);
+    throw new Error(`opende warehouse layer supports Snowflake only; target '${tgt}' is type '${o.type}'.`);
   }
   return { profileName, target: tgt, config: o, missingEnvVars: [...new Set(missing)], profilesPath: pf };
 }
@@ -67,7 +67,7 @@ export function snowflakeConnectionOptions(o) {
     warehouse: o.warehouse,
     database: o.database,
     schema: o.schema,
-    application: "altimate-mcp",
+    application: "opende",
   };
   if (o.authenticator) opts.authenticator = o.authenticator;
   if (o.private_key_path) {

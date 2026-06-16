@@ -5,6 +5,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.1.2] — 2026-06-16
+
+### Fixed
+- **Branding in all user-facing output** — stale `altimate` strings replaced with `opende`
+  in every message a user can actually see:
+  - `gate.js`: blocked/advisory hook output, error-checking stderr, CLI summary line
+  - `mcp.js`: tool error responses (`opende <tool> error: …`)
+  - `review/format.js`: PR comment footer (`opende dbt-pr-review · verdict …`)
+  - `profiles.js`: Snowflake `application` connection field (visible in
+    `ACCOUNT_USAGE.QUERY_HISTORY`); unsupported-type error message
+  - `cli/adapters/claude.js`: `init` log lines and the PostToolUse `statusMessage`
+  - Comments referencing altimate-code/altimate-core as attribution are intentionally kept.
+  - `.altimate/review.yml` path is intentional (config convention) and unchanged.
+
+---
+
 ## [0.1.1] — 2026-06-16
 
 ### Changed

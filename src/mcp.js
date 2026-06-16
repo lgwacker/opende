@@ -255,7 +255,7 @@ async function main() {
         const text = typeof result === "string" ? result : JSON.stringify(result, null, 2);
         return { content: [{ type: "text", text }] };
       } catch (e) {
-        return { isError: true, content: [{ type: "text", text: `altimate-core ${name} error: ${e?.message || e}` }] };
+        return { isError: true, content: [{ type: "text", text: `opende ${name} error: ${e?.message || e}` }] };
       }
     });
   }

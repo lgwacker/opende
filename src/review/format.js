@@ -62,7 +62,7 @@ export function renderSummary(env) {
 
   lines.push(
     "---",
-    `altimate dbt-pr-review · verdict \`${env.verdict}\`` +
+    `opende dbt-pr-review · verdict \`${env.verdict}\`` +
       (env.idealVerdict !== env.verdict ? ` (ideal \`${env.idealVerdict}\`, softened by ${env.mode} mode)` : "") +
       (env.signature ? ` · signed \`${env.signature.slice(0, 18)}…\`` : "") +
       (env.manifestHash ? ` · manifest \`${env.manifestHash.slice(0, 10)}\`` : ""),

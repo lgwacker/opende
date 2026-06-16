@@ -131,7 +131,7 @@ function mergeMcpJson(projectDir, mcpBin, dbtCmd, signingKey, log) {
     o.mcpServers = o.mcpServers || {};
     o.mcpServers.opende = { command: "node", args: [mcpBin, "--project-dir", projectDir], env };
   });
-  log("  ~ .mcp.json (server 'altimate')");
+  log("  ~ .mcp.json (server 'opende')");
 }
 
 function wireGateHook(projectDir, gateBin, log) {
@@ -147,9 +147,9 @@ function wireGateHook(projectDir, gateBin, log) {
     if (!already) {
       o.hooks.PostToolUse.push({
         matcher: "Write|Edit",
-        hooks: [{ type: "command", command: cmd, statusMessage: "Running altimate-core SQL gate" }],
+        hooks: [{ type: "command", command: cmd, statusMessage: "Running opende SQL gate" }],
       });
     }
   });
-  log("  ~ .claude/settings.json (gate hook + enabled 'altimate')");
+  log("  ~ .claude/settings.json (gate hook + enabled 'opende')");
 }
