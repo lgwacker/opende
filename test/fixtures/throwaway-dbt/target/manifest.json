@@ -1,0 +1,1 @@
+{"metadata":{"adapter_type":"snowflake"},"nodes":{"model.throwaway.stg_orders":{"resource_type":"model","name":"stg_orders","database":"db","schema":"sch","columns":{"order_id":{"name":"order_id"},"customer_id":{"name":"customer_id"},"amount":{"name":"amount"}},"depends_on":{"nodes":[]}}},"sources":{},"child_map":{"model.throwaway.stg_orders":[]}}

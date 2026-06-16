@@ -1,0 +1,6 @@
+name: throwaway
+version: "1.0.0"
+profile: throwaway
+models:
+  throwaway:
+    +materialized: view

@@ -1,0 +1,152 @@
+---
+name: data-viz
+description: Build modern, interactive data visualizations and dashboards using React/Recharts/shadcn/ui, Tremor, Nivo, D3, or Plotly. Use when asked to visualize data, build dashboards, create analytics views, chart metrics, or turn raw data into an interactive visual interface.
+---
+
+# AI-First Data Visualization
+
+See [ALTIMATE_CLI.md](../ALTIMATE_CLI.md) for CLI reference.
+
+## How this maps (Option A)
+
+No altimate tooling is needed for this skill. Data comes from `altimate-dbt execute` query results (or user-supplied data). All visualization work is pure Claude + the libraries below.
+
+## Philosophy
+
+Build production-quality interactive data interfaces with modern component libraries — no vendor lock-in, embeddable anywhere. When no tool is specified, build code-first. When the user explicitly names a BI tool, use it — only suggest code-first if they ask for options or hit a technical blocker.
+
+## Getting Data
+
+Before building, fetch query results from the warehouse when needed:
+
+```bash
+altimate-dbt execute --query "SELECT ..." --limit 500
+```
+
+Validate that every field referenced in chart/filter code exists in the query output.
+
+## Technology Stack
+
+Full API patterns & code: [references/component-guide.md](references/component-guide.md)
+
+### Framework Priority
+
+1. **React + Tailwind** — Default when JSX/TSX supported
+2. **HTML + CSS + Vanilla JS** — Fallback (use D3 or Chart.js)
+3. **Python (Plotly/Dash)** — Python-only environments only
+
+### Library Selection
+
+| Library | Best For |
+|---------|----------|
+| **shadcn/ui charts** | Default first choice — general dashboards, most chart types |
+| **Recharts** | Line, bar, area, composed, radar — fine-grained control |
+| **Tremor** | KPI cards, metric displays, full dashboard layouts |
+| **Nivo** | Heatmaps, treemaps, choropleth, calendar, Sankey, funnel |
+| **visx** | Bespoke custom viz — D3-level control with React |
+| **D3.js** | Force-directed graphs, DAGs, maps — maximum flexibility |
+| **Victory** | When animation quality matters most |
+
+**Supporting**: Tailwind CSS · Radix UI · Framer Motion · Lucide React · date-fns · Papaparse · lodash
+
+## Building a Visualization
+
+### Step 1: Understand the Data Story
+
+Before code, identify: **What question does the data answer?** Who is the audience (exec → KPIs only, analyst → drill-down, public → narrative)? **What's the ONE key insight?** Design around it.
+
+### Step 2: Choose Chart Type
+
+| Data Relationship | Chart Type | Library |
+|---|---|---|
+| Trend over time | Line, Area | shadcn/Recharts |
+| Category comparison | Bar (horizontal if many) | shadcn/Recharts |
+| Part of whole | Donut, Treemap | shadcn/Nivo |
+| Distribution | Histogram, Box, Violin | Nivo/visx |
+| Correlation | Scatter, Bubble | Recharts/visx |
+| Geographic | Choropleth, Dot map | Nivo/D3 |
+| Hierarchical | Treemap, Sunburst | Nivo |
+| Flow / Process | Sankey, Funnel | Nivo/D3 |
+| Single KPI | Metric card, Gauge, Sparkline | Tremor/shadcn |
+| Multi-metric overview | Dashboard grid of cards | Tremor + shadcn |
+| Ranking | Horizontal bar, Bar list | Tremor |
+| Column/model lineage | Force-directed DAG | D3 |
+| Pipeline dependencies | Hierarchical tree, DAG | D3/Nivo |
+| Multi-dimensional quality | Radar/Spider | Recharts |
+| Activity density over time | Calendar heatmap | Nivo |
+| Incremental change breakdown | Waterfall | Recharts (custom) |
+
+### Step 3: Build the Interface
+
+Start from this layout — remove what the data doesn't need:
+
+```
+┌─────────────────────────────────────────┐
+│ Header: Title + Description + Date Range│
+├─────────────────────────────────────────┤
+│ KPI Row: 3-5 metric cards + sparklines  │
+├─────────────────────────────────────────┤
+│ Primary Visualization (largest chart)   │
+├──────────────────┬──────────────────────┤
+│ Secondary Chart  │ Supporting Chart/Tbl │
+├──────────────────┴──────────────────────┤
+│ Detail Table (sortable, filterable)     │
+└─────────────────────────────────────────┘
+```
+
+A single insight might just be one chart with a headline and annotation. Scale complexity to audience.
+
+### Step 4: Design Principles
+
+- **Data-ink ratio**: Remove chartjunk — unnecessary gridlines, redundant labels, decorative borders
+- **Color with purpose**: Encode meaning (red=bad, green=good, blue=neutral). Max 5-7 colors. Single-hue gradient for sequential data
+- **Typography hierarchy**: Title → subtitle (muted) → axis labels (small) → data labels
+- **Responsive**: `min-h-[VALUE]` on all charts. Grid stacks on mobile
+- **Animation**: Entry transitions only, `duration-300` to `duration-500`. Never continuous
+- **Accessibility**: `aria-label` on charts, WCAG AA contrast, don't rely on color alone
+- **Dynamic color safety**: When colors come from external sources (brand palettes, category maps, API data, user config), never apply them directly as text color without a contrast check. Safe pattern: use the external color only for non-text elements (left border, dot, underline); always use the standard text color for the label itself. If color-coded text is required, apply a minimum lightness floor: `color: hsl(from brandColor h s max(l, 60%))`
+- **Icon semantics**: Verify every icon matches its label's actual meaning. Common traps: using a rising-trend icon for metrics where lower is better (latency, error rate, cost); using achievement icons for plain counts. When in doubt, use a neutral descriptive icon
+
+### Step 5: Interactivity & Annotations
+
+**Priority**: Tooltips (every chart) → Filtering → Sorting → Drill-down → Cross-filtering → Export → Annotations
+
+**Annotations** turn charts into stories. Mark: inflection points, threshold crossings (amber), external events (indigo/red), anomalies (red), achievements (green). **Limit 3 per chart.**
+
+### Step 6: Tell the Story
+
+- **Headline states insight**: "Revenue grew 23% QoQ, driven by enterprise" — not "Q3 Revenue Chart"
+- **Annotate key moments** directly on chart
+- **Contextual comparisons**: vs. prior period, vs. target, vs. benchmark
+- **Progressive disclosure**: Overview first — detail on demand
+
+## Environment-Specific Guidance
+
+| Environment | Approach |
+|---|---|
+| **Claude Artifacts** | React (JSX), single file, default export. Available: `recharts`, `lodash`, `d3`, `lucide-react`, shadcn via `@/components/ui/*`, Tailwind |
+| **Claude Code / Terminal** | Vite + React + Tailwind. Add shadcn/ui + Recharts. Structure: `src/components/charts/`, `src/components/cards/`, `src/data/` |
+| **Python / Jupyter** | Plotly for charts, Plotly Dash for dashboards |
+| **Cursor / Bolt / other IDEs** | Match existing framework. Prefer shadcn/ui if present |
+
+## Anti-Patterns
+
+- Screenshot/static charts — build interactive components
+- Defaulting to BI tools unprompted — build code-first when no tool specified
+- Default matplotlib — always customize in Python
+- Rainbow palettes — use deliberate, meaningful colors
+- 3D charts — almost never appropriate
+- Pie charts > 5 slices — use horizontal bar
+- Unlabeled dual y-axes — use two separate charts
+- Truncated bar axes — always start at zero
+- Filtering or mapping over a field not confirmed to exist in the data export — an undefined field in `.filter()` or `.map()` produces empty arrays or NaN silently, not an error; always validate the exported schema matches what the chart code consumes
+
+## Pre-Delivery Checklist
+
+- [ ] Every tab / view activated — all charts render (no blank canvases, no unexpected 0-1 axes)
+- [ ] Every field referenced in chart/filter code confirmed present in the data export
+- [ ] All text readable on its background — check explicitly when colors come from external data
+- [ ] All icons match their label's meaning
+- [ ] Tooltips appear on hover for every chart
+- [ ] No chart silently receives an empty dataset — add a visible empty state or console warning
+- [ ] Mobile: grid stacks correctly, no body-level horizontal overflow

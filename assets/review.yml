@@ -1,0 +1,12 @@
+mode: comment
+severityThreshold: suggestion
+manifestPath: target/manifest.json
+dialect: snowflake
+reviewers: []
+exclude:
+  - models/legacy/**
+rubric:
+  blockOn: [lineage_breakage, contract_violation, pii_exposure, semantic_change]
+  warningPatternThreshold: 3
+  thresholds:
+    warehouseCostMinRows: 1000000

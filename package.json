@@ -1,0 +1,25 @@
+{
+  "name": "opende",
+  "version": "0.1.0",
+  "description": "A stripped extract of altimate-code that brings its deterministic SQL intelligence (Rust core engine, signed PR-review verdict, gate, skills, agent personas) to model-locked subscription harnesses (Claude Code, Cursor, etc.) where companies only allow their own subscription model — no second LLM, no extra API key, no altimate agent ever invoked.",
+  "type": "module",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/lgwacker/opende.git" },
+  "bin": {
+    "opende": "src/cli/init.js",
+    "opende-mcp": "src/mcp.js",
+    "opende-gate": "src/gate.js",
+    "opende-review": "src/pr_review.js"
+  },
+  "files": ["src", "assets", "README.md", "LICENSE", "NOTICE"],
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@altimateai/altimate-core": "0.4.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "js-yaml": "^4.2.0",
+    "zod": "^3.23.0"
+  },
+  "optionalDependencies": {
+    "snowflake-sdk": "^2.4.3"
+  }
+}

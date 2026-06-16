@@ -1,0 +1,18 @@
+opende
+=======================
+
+This project reconstructs the *deterministic* (no-LLM) data-engineering logic of
+altimate-code so it can run inside agent harnesses that already provide a capable
+model (Claude Code, Cursor, etc.) without invoking altimate-code's own LLM agent.
+
+Attribution
+-----------
+- Derived from and inspired by **altimate-code** (https://github.com/AltimateAI/altimate-code),
+  MIT License, © AltimateAI. The skills, agent doctrine, and the dbt-PR-review
+  verdict protocol are adaptations of altimate-code's open-source design.
+- Depends on **@altimateai/altimate-core** (the Rust/NAPI deterministic SQL engine),
+  published by AltimateAI on npm. This package calls only its local, offline,
+  no-network deterministic functions; the backend/AI/telemetry surface
+  (initSdk, flushSdk, resetSdk, reviewAiParse, reviewAiSystemPrompt) is never invoked.
+
+This is an independent project and is not affiliated with or endorsed by AltimateAI.
