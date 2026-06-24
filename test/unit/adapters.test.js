@@ -79,10 +79,8 @@ describe("claudeAdapter.scaffold", () => {
     assert.ok(hookStr.includes("gate.js") || hookStr.includes("opende-gate"), "gate hook not found in PostToolUse");
   });
 
-  test("creates AGENTS.md with doctrine sentinel markers", () => {
-    const agentsMd = fs.readFileSync(path.join(tmpDir, "AGENTS.md"), "utf8");
-    assert.ok(agentsMd.includes("<!-- opende:doctrine:start -->"));
-    assert.ok(agentsMd.includes("<!-- opende:doctrine:end -->"));
+  test("does not create or modify AGENTS.md", () => {
+    assert.ok(!fs.existsSync(path.join(tmpDir, "AGENTS.md")), "scaffold should not create AGENTS.md");
   });
 
   test("creates .claude/agents/ directory with agent markdown files", () => {
@@ -102,23 +100,7 @@ describe("claudeAdapter.scaffold", () => {
     assert.ok(fs.existsSync(path.join(tmpDir, ".altimate", "review.yml")));
   });
 
-  test("agent files contain TOOLCOUNT substitution (not raw {{TOOLCOUNT}} token)", () => {
-    const agentsDir = path.join(tmpDir, ".claude", "agents");
-    for (const f of fs.readdirSync(agentsDir).filter(f => f.endsWith(".md"))) {
-      const content = fs.readFileSync(path.join(agentsDir, f), "utf8");
-      assert.ok(!content.includes("{{TOOLCOUNT}}"), `unsubstituted {{TOOLCOUNT}} in ${f}`);
-    }
-  });
-
   describe("idempotency", () => {
-    test("running scaffold twice does not create duplicate AGENTS.md doctrine blocks", () => {
-      const ctx = makeCtx(tmpDir);
-      claudeAdapter.scaffold(ctx); // second run
-      const agentsMd = fs.readFileSync(path.join(tmpDir, "AGENTS.md"), "utf8");
-      const startCount = (agentsMd.match(/<!-- opende:doctrine:start -->/g) || []).length;
-      assert.equal(startCount, 1, `expected exactly 1 doctrine block, found ${startCount}`);
-    });
-
     test("running scaffold twice does not create duplicate gate hooks", () => {
       const ctx = makeCtx(tmpDir);
       claudeAdapter.scaffold(ctx); // third run

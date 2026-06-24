@@ -1,15 +1,11 @@
 // Claude Code adapter — scaffolds the portable tooling into a target project.
 // Writes/merges idempotently: .mcp.json, .claude/skills/, .claude/agents/,
-// the AGENTS.md doctrine block, the PostToolUse gate hook, and a sample
-// .altimate/review.yml. Re-running converges (content-hash, sentinel markers,
-// de-duped server key + hook).
+// the PostToolUse gate hook, and a sample .altimate/review.yml.
+// Re-running converges (content-hash, de-duped server key + hook).
+// AGENTS.md is intentionally left untouched — the user owns that file.
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-
-const TOOLCOUNT = "64";
-const DOCTRINE_START = "<!-- opende:doctrine:start -->";
-const DOCTRINE_END = "<!-- opende:doctrine:end -->";
 
 // Replace ONLY the uppercase {{TOKEN}}s — never touches dbt's `{{ ref() }}` etc.
 function applyTokens(text, tokens) {
@@ -38,7 +34,6 @@ export const claudeAdapter = {
     const { projectDir, pkgRoot, bins, dbtCmd, signingKey, force, log } = ctx;
     const tokens = {
       RUNNER: dbtCmd,
-      TOOLCOUNT,
       GATE_INVOCATION: `node "${bins.gate}"`,
       REVIEW_INVOCATION: `node "${bins.review}"`,
     };
@@ -53,13 +48,10 @@ export const claudeAdapter = {
     // 3. agents → .claude/agents/<name>.md (frontmatter from manifest + body).
     renderAgents(assets, projectDir, tokens, { force }, log);
 
-    // 4. AGENTS.md doctrine block (sentinel-wrapped, idempotent).
-    upsertDoctrine(assets, projectDir, tokens, log);
-
-    // 5. PostToolUse gate hook + enable the MCP server.
+    // 4. PostToolUse gate hook + enable the MCP server.
     wireGateHook(projectDir, bins.gate, log);
 
-    // 6. sample .altimate/review.yml (only if absent).
+    // 5. sample .altimate/review.yml (only if absent).
     const reviewDst = path.join(projectDir, ".altimate", "review.yml");
     if (!fs.existsSync(reviewDst)) {
       fs.mkdirSync(path.dirname(reviewDst), { recursive: true });
@@ -90,27 +82,6 @@ function renderAgents(assets, projectDir, tokens, opts, log) {
     if (Array.isArray(a.tools)) fm.push(`tools: ${a.tools.join(", ")}`);
     fm.push("---", "");
     writeIfChanged(path.join(projectDir, ".claude", "agents", `${a.name}.md`), fm.join("\n") + body, opts, log, `agent: ${a.name}`);
-  }
-}
-
-function upsertDoctrine(assets, projectDir, tokens, log) {
-  const section = applyTokens(fs.readFileSync(path.join(assets, "doctrine", "AGENTS.section.md"), "utf8"), tokens).trim();
-  const block = `${DOCTRINE_START}\n${section}\n${DOCTRINE_END}`;
-  const agentsPath = path.join(projectDir, "AGENTS.md");
-  let cur = readIf(agentsPath);
-  if (cur === null) {
-    fs.writeFileSync(agentsPath, `# AGENTS.md\n\n${block}\n`);
-    log("  + AGENTS.md (created with doctrine block)");
-    return;
-  }
-  const re = new RegExp(`${DOCTRINE_START}[\\s\\S]*?${DOCTRINE_END}`);
-  if (re.test(cur)) {
-    const next = cur.replace(re, block);
-    if (sha(next) === sha(cur)) log("  = AGENTS.md doctrine (unchanged)");
-    else { fs.writeFileSync(agentsPath, next); log("  ~ AGENTS.md doctrine (updated in place)"); }
-  } else {
-    fs.writeFileSync(agentsPath, cur.replace(/\s*$/, "") + `\n\n${block}\n`);
-    log("  ~ AGENTS.md (appended doctrine block)");
   }
 }
 

@@ -25,6 +25,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Wrong dbt flags fixed** in skill files: `--model` → `--select`; `show-source`
   (non-existent) → `mcp__opende__schema_inspect`.
 
+### Removed
+- **Doctrine injection removed from `opende init`** — `opende init` no longer creates
+  or modifies `AGENTS.md`. The user owns that file. Agent personas (`builder`,
+  `analyst`, `reviewer`, `plan`) already contain the full protocols; security
+  invariants are enforced in `src/safety.js` and `src/core.js`. `assets/doctrine/`
+  directory deleted.
+
 ### Improved
 - **MCP tool descriptions** in `src/mcp.js` — disambiguated overlapping tools and
   clarified semantics throughout:
