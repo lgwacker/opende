@@ -186,9 +186,16 @@ async function main() {
 }
 
 // Only run when invoked directly — not when imported by tests.
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
-  main().then(code => process.exit(code)).catch(e => {
-    process.stderr.write(String(e?.stack || e) + "\n");
-    process.exit(1);
-  });
+// Resolve symlinks so npx/.bin/ symlinks match the real file path.
+if (process.argv[1]) {
+  try {
+    const entry = fs.realpathSync(process.argv[1]);
+    const self  = fs.realpathSync(fileURLToPath(import.meta.url));
+    if (entry === self) {
+      main().then(code => process.exit(code)).catch(e => {
+        process.stderr.write(String(e?.stack || e) + "\n");
+        process.exit(1);
+      });
+    }
+  } catch { /* process.argv[1] unresolvable — not our entry point */ }
 }
