@@ -1,12 +1,15 @@
 #!/usr/bin/env node
-// opende init — scaffold the deterministic tooling into a target
-// project for a given harness. Resolves the installed package's bins to absolute
-// paths (so a git-installed package works regardless of the MCP launcher's cwd).
+// opende init — scaffold the deterministic tooling into a target project.
+// Interactive by default: detects warehouse env vars from profiles.yml and
+// prompts for values to inject into .mcp.json. Pass --yes for non-interactive.
 //
-//   npx opende init --harness claude --project-dir .
-//     [--dbt-cmd "./scripts/run_dbt.sh"] [--signing-key <key>] [--force]
+//   npx opende init                                  # interactive wizard
+//   npx opende init --yes --project-dir . \          # non-interactive (CI)
+//     --dbt-cmd ./scripts/run_dbt.sh
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
+import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { getAdapter } from "./adapters/index.js";
 
@@ -16,45 +19,150 @@ const flag = (argv, name, def) => {
 };
 const has = (argv, name) => argv.includes(`--${name}`);
 
-function main() {
+// Find env_var('NAME') references in profiles.yml (project dir first, then ~/.dbt/).
+function detectProfileEnvVars(projectDir) {
+  const candidates = [
+    path.join(projectDir, "profiles.yml"),
+    path.join(os.homedir(), ".dbt", "profiles.yml"),
+  ];
+  for (const p of candidates) {
+    if (!fs.existsSync(p)) continue;
+    const content = fs.readFileSync(p, "utf8");
+    const vars = [...content.matchAll(/env_var\(['"]([^'"]+)['"]/g)].map(m => m[1]);
+    return { file: p, vars: [...new Set(vars)] };
+  }
+  return { file: null, vars: [] };
+}
+
+async function runWizard(defaults) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+  const ask = (label, def) => new Promise(resolve => {
+    const suffix = def ? ` (${def}): ` : ": ";
+    rl.question(`  ${label}${suffix}`, ans => resolve(ans.trim() || def || ""));
+  });
+
+  // Hidden input for secrets — pauses readline, uses raw stdin, then resumes.
+  const askHidden = (label) => {
+    if (!process.stdin.isTTY) return ask(label, "");
+    rl.pause();
+    return new Promise(resolve => {
+      process.stdout.write(`  ${label}: `);
+      process.stdin.setRawMode(true);
+      process.stdin.resume();
+      let val = "";
+      const onData = (ch) => {
+        const code = ch.charCodeAt(0);
+        if (code === 13 || code === 10) {
+          process.stdin.setRawMode(false);
+          process.stdin.removeListener("data", onData);
+          process.stdout.write("\n");
+          rl.resume();
+          resolve(val);
+        } else if (code === 127 || code === 8) {
+          if (val.length > 0) { val = val.slice(0, -1); process.stdout.write("\b \b"); }
+        } else if (code === 3) {
+          process.stdout.write("\n"); process.exit(1);
+        } else {
+          val += ch; process.stdout.write("*");
+        }
+      };
+      process.stdin.on("data", onData);
+    });
+  };
+
+  process.stdout.write("\nopende — interactive setup\n\n");
+
+  const projectDir = path.resolve(await ask("dbt project directory", defaults.projectDir));
+  const dbtCmd    = await ask("dbt command", defaults.dbtCmd);
+  const signingKey = await ask("PR review signing key (optional, Enter to skip)", defaults.signingKey || "");
+
+  // Detect and prompt for warehouse credentials from profiles.yml.
+  const { file: profileFile, vars: envVarNames } = detectProfileEnvVars(projectDir);
+  const extraEnv = {};
+
+  if (envVarNames.length > 0) {
+    const rel = path.relative(process.cwd(), profileFile);
+    process.stdout.write(`\n  Found ${envVarNames.length} env var(s) referenced in ${rel}.\n`);
+    process.stdout.write("  Provide values to inject into .mcp.json (the MCP server process\n");
+    process.stdout.write("  does not inherit your shell env — it needs them explicitly).\n\n");
+    for (const name of envVarNames) {
+      const current = process.env[name];
+      const isSecret = /password|secret|token|private_key(?!_path)/i.test(name);
+      let val;
+      if (current) {
+        const display = isSecret ? "*".repeat(Math.min(current.length, 8)) : current;
+        val = await ask(`${name} [env: ${display}, Enter to use]`, current);
+      } else if (isSecret) {
+        val = await askHidden(name);
+      } else {
+        val = await ask(name, "");
+      }
+      if (val) extraEnv[name] = val;
+    }
+  } else if (!profileFile) {
+    process.stdout.write("\n  No profiles.yml found — warehouse credentials not configured.\n");
+    process.stdout.write("  Add them manually to .mcp.json after init if needed.\n");
+  }
+
+  rl.close();
+  return { projectDir, dbtCmd, signingKey: signingKey || null, extraEnv };
+}
+
+async function main() {
   const argv = process.argv.slice(2);
   const cmd = argv[0];
   if (cmd !== "init") {
-    process.stderr.write("usage: opende init --harness <claude> --project-dir <dir> [--dbt-cmd <cmd>] [--signing-key <k>] [--force]\n");
+    process.stderr.write("usage: opende init [--yes] [--harness claude] [--project-dir <dir>] [--dbt-cmd <cmd>] [--signing-key <k>] [--force]\n");
     return cmd === "--help" || cmd === "-h" ? 0 : 1;
   }
 
   const harness = flag(argv, "harness", "claude");
-  const projectDir = path.resolve(flag(argv, "project-dir", process.cwd()));
-  const dbtCmd = flag(argv, "dbt-cmd", "dbt");
-  const signingKey = flag(argv, "signing-key", "");
-  const force = has(argv, "force");
+  const force   = has(argv, "force");
+  const yes     = has(argv, "yes");
+
+  let projectDir, dbtCmd, signingKey, extraEnv;
+
+  if (yes) {
+    projectDir = path.resolve(flag(argv, "project-dir", process.cwd()));
+    dbtCmd     = flag(argv, "dbt-cmd", "dbt");
+    signingKey = flag(argv, "signing-key", "") || null;
+    extraEnv   = {};
+  } else {
+    ({ projectDir, dbtCmd, signingKey, extraEnv } = await runWizard({
+      projectDir: flag(argv, "project-dir", "."),
+      dbtCmd:     flag(argv, "dbt-cmd", "dbt"),
+      signingKey: flag(argv, "signing-key", ""),
+    }));
+  }
 
   if (!fs.existsSync(path.join(projectDir, "dbt_project.yml"))) {
     process.stderr.write(`! Warning: no dbt_project.yml in ${projectDir} — is this the dbt project root? Continuing.\n`);
   }
 
-  // Resolve this package's bins to absolute paths (init.js is at <pkg>/src/cli/init.js).
-  const here = path.dirname(fileURLToPath(import.meta.url));        // <pkg>/src/cli
-  const srcDir = path.resolve(here, "..");                          // <pkg>/src
-  const pkgRoot = path.resolve(here, "..", "..");                   // <pkg>
+  const here   = path.dirname(fileURLToPath(import.meta.url));
+  const srcDir = path.resolve(here, "..");
+  const pkgRoot = path.resolve(here, "..", "..");
   const bins = {
-    mcp: path.join(srcDir, "mcp.js"),
-    gate: path.join(srcDir, "gate.js"),
+    mcp:    path.join(srcDir, "mcp.js"),
+    gate:   path.join(srcDir, "gate.js"),
     review: path.join(srcDir, "pr_review.js"),
   };
 
   const adapter = getAdapter(harness);
   const log = (m) => process.stdout.write(m + "\n");
-  log(`opende → ${harness} | project: ${projectDir} | dbt: ${dbtCmd}`);
-  adapter.scaffold({ projectDir, pkgRoot, srcDir, bins, dbtCmd, signingKey, force, log });
-  log("Done. Restart the harness (or reload MCP/agents) to pick up the new config.");
+  log(`\nopende → ${harness} | project: ${projectDir} | dbt: ${dbtCmd}`);
+  adapter.scaffold({ projectDir, pkgRoot, srcDir, bins, dbtCmd, signingKey, extraEnv, force, log });
+  log("Done. Restart Claude Code (or reload MCP/agents) to pick up the new config.");
+
+  if (Object.keys(extraEnv).length > 0) {
+    log("\n⚠  .mcp.json contains credentials — ensure it is in .gitignore.");
+  }
+
   return 0;
 }
 
-try {
-  process.exit(main());
-} catch (e) {
+main().then(code => process.exit(code)).catch(e => {
   process.stderr.write(String(e?.stack || e) + "\n");
   process.exit(1);
-}
+});

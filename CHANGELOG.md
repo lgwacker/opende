@@ -25,6 +25,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Wrong dbt flags fixed** in skill files: `--model` → `--select`; `show-source`
   (non-existent) → `mcp__opende__schema_inspect`.
 
+### Added
+- **`opende init` interactive wizard** — running without `--yes` now prompts for
+  project directory, dbt command, signing key, and warehouse credentials. Reads
+  `profiles.yml` (project root or `~/.dbt/`) to auto-detect `env_var()` references
+  and prompts for each value; secrets (PASSWORD, TOKEN, etc.) use hidden input.
+  Wizard output is injected into `.mcp.json` so the MCP server process gets the
+  credentials it needs (it does not inherit the shell environment).
+  Pass `--yes` for the original non-interactive behaviour.
+- **Existing `.mcp.json` credentials preserved on re-run** — user-added env vars
+  (e.g. warehouse credentials) survive subsequent `opende init` calls. Managed vars
+  (`ALTIMATE_DBT_PROJECT_DIR`, `DBT_RUNNER_CMD`, `ALTIMATE_REVIEW_SIGNING_KEY`) are
+  always updated to reflect current flags.
+
 ### Removed
 - **Doctrine injection removed from `opende init`** — `opende init` no longer creates
   or modifies `AGENTS.md`. The user owns that file. Agent personas (`builder`,

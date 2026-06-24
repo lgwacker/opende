@@ -1,11 +1,11 @@
 [
   {
-    "name": "builder",
+    "name": "opende-builder",
     "description": "Data-engineering builder for this dbt/Snowflake project — creates and modifies models, SQL, tests, and YAML. Full read/write. Follows the Pre-Execution Protocol and dbt Verification Workflow, and leaves the project green. Use for building or changing dbt models.",
     "tools": null
   },
   {
-    "name": "analyst",
+    "name": "opende-analyst",
     "description": "Read-only data analyst for the Snowflake/dbt project — explores data, runs SELECT queries, profiles tables, audits PII/cost, and reports insights. Cannot write files or mutate data. Use for safe data exploration and analysis against production.",
     "tools": [
       "Read",
@@ -39,7 +39,7 @@
     ]
   },
   {
-    "name": "plan",
+    "name": "opende-plan",
     "description": "Read-only planning agent for dbt/SQL work — investigates the project and deterministic analysis, then proposes a clear, well-scoped implementation plan. No execution, no edits. Use to design an approach before building.",
     "tools": [
       "Read",
@@ -59,7 +59,7 @@
     ]
   },
   {
-    "name": "reviewer",
+    "name": "opende-reviewer",
     "description": "Adversarial read-only dbt/SQL change reviewer. Produces a signed APPROVE/COMMENT/REQUEST_CHANGES verdict where every blocking finding is backed by a deterministic engine call — equivalence, column-lineage blast radius, PII, contract shape, grade. Use to review a PR, a commit, a branch, or staged/working-tree changes before merge.",
     "tools": [
       "Read",

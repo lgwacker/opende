@@ -30,7 +30,7 @@ describe("claudeAdapter.scaffold", () => {
   let tmpDir;
   const logs = [];
 
-  const makeCtx = (dir) => ({
+  const makeCtx = (dir, extra = {}) => ({
     projectDir: dir,
     pkgRoot: OPENDE_ROOT,
     bins: {
@@ -40,8 +40,10 @@ describe("claudeAdapter.scaffold", () => {
     },
     dbtCmd: "dbt",
     signingKey: null,
+    extraEnv: {},
     force: false,
     log: (msg) => logs.push(msg),
+    ...extra,
   });
 
   test.before(() => {
@@ -126,6 +128,32 @@ describe("claudeAdapter.scaffold", () => {
     const settings = JSON.parse(fs.readFileSync(path.join(tmpDir, ".claude", "settings.json"), "utf8"));
     const hookCmd = JSON.stringify(settings.hooks?.PostToolUse || []);
     assert.ok(hookCmd.includes("gate.js"), `gate.js not referenced in hook command: ${hookCmd}`);
+  });
+
+  test("extraEnv credentials are written to .mcp.json", () => {
+    const credDir = fs.mkdtempSync(path.join(os.tmpdir(), "opende-creds-"));
+    try {
+      claudeAdapter.scaffold(makeCtx(credDir, { extraEnv: { SNOWFLAKE_ACCOUNT: "myaccount", SNOWFLAKE_PASSWORD: "s3cr3t" } }));
+      const mcp = JSON.parse(fs.readFileSync(path.join(credDir, ".mcp.json"), "utf8"));
+      assert.equal(mcp.mcpServers.opende.env.SNOWFLAKE_ACCOUNT, "myaccount");
+      assert.equal(mcp.mcpServers.opende.env.SNOWFLAKE_PASSWORD, "s3cr3t");
+    } finally {
+      fs.rmSync(credDir, { recursive: true, force: true });
+    }
+  });
+
+  test("existing .mcp.json credentials are preserved on re-run without extraEnv", () => {
+    const credDir = fs.mkdtempSync(path.join(os.tmpdir(), "opende-rerun-"));
+    try {
+      // First run: inject credentials via extraEnv
+      claudeAdapter.scaffold(makeCtx(credDir, { extraEnv: { SNOWFLAKE_PASSWORD: "s3cr3t" } }));
+      // Second run: no extraEnv (simulates re-run after upgrade)
+      claudeAdapter.scaffold(makeCtx(credDir));
+      const mcp = JSON.parse(fs.readFileSync(path.join(credDir, ".mcp.json"), "utf8"));
+      assert.equal(mcp.mcpServers.opende.env.SNOWFLAKE_PASSWORD, "s3cr3t", "credential should survive re-run");
+    } finally {
+      fs.rmSync(credDir, { recursive: true, force: true });
+    }
   });
 
   test("signing key is included in mcp.json env when provided", () => {

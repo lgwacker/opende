@@ -31,7 +31,7 @@ export const claudeAdapter = {
   id: "claude",
 
   scaffold(ctx) {
-    const { projectDir, pkgRoot, bins, dbtCmd, signingKey, force, log } = ctx;
+    const { projectDir, pkgRoot, bins, dbtCmd, signingKey, extraEnv = {}, force, log } = ctx;
     const tokens = {
       RUNNER: dbtCmd,
       GATE_INVOCATION: `node "${bins.gate}"`,
@@ -40,7 +40,7 @@ export const claudeAdapter = {
     const assets = path.join(pkgRoot, "assets");
 
     // 1. .mcp.json — merge server key "opende".
-    mergeMcpJson(projectDir, bins.mcp, dbtCmd, signingKey, log);
+    mergeMcpJson(projectDir, bins.mcp, dbtCmd, signingKey, extraEnv, log);
 
     // 2. skills → .claude/skills/ (token-substituted).
     copyTree(path.join(assets, "skills"), path.join(projectDir, ".claude", "skills"), tokens, { force }, log, "skill");
@@ -94,13 +94,21 @@ function mergeJsonFile(file, mutate) {
   fs.writeFileSync(file, JSON.stringify(obj, null, 2) + "\n");
 }
 
-function mergeMcpJson(projectDir, mcpBin, dbtCmd, signingKey, log) {
+function mergeMcpJson(projectDir, mcpBin, dbtCmd, signingKey, extraEnv, log) {
   const file = path.join(projectDir, ".mcp.json");
-  const env = { ALTIMATE_DBT_PROJECT_DIR: projectDir, DBT_RUNNER_CMD: dbtCmd };
-  if (signingKey) env.ALTIMATE_REVIEW_SIGNING_KEY = signingKey;
+  // Managed vars — always reflect current flags.
+  const managed = { ALTIMATE_DBT_PROJECT_DIR: projectDir, DBT_RUNNER_CMD: dbtCmd };
+  if (signingKey) managed.ALTIMATE_REVIEW_SIGNING_KEY = signingKey;
   mergeJsonFile(file, (o) => {
+    // Preserve existing env (user-added credentials survive re-runs).
+    // extraEnv from the wizard overlays existing; managed vars always win.
+    const existing = o.mcpServers?.opende?.env || {};
     o.mcpServers = o.mcpServers || {};
-    o.mcpServers.opende = { command: "node", args: [mcpBin, "--project-dir", projectDir], env };
+    o.mcpServers.opende = {
+      command: "node",
+      args: [mcpBin, "--project-dir", projectDir],
+      env: { ...existing, ...extraEnv, ...managed },
+    };
   });
   log("  ~ .mcp.json (server 'opende')");
 }
