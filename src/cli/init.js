@@ -13,14 +13,25 @@ import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { getAdapter } from "./adapters/index.js";
 
-const flag = (argv, name, def) => {
+export const flag = (argv, name, def) => {
   const i = argv.indexOf(`--${name}`);
   return i !== -1 && argv[i + 1] && !argv[i + 1].startsWith("--") ? argv[i + 1] : def;
 };
-const has = (argv, name) => argv.includes(`--${name}`);
+export const has = (argv, name) => argv.includes(`--${name}`);
+
+// Pure key-chunk handler for raw-mode hidden input — returns { val, done, abort }.
+// chunk may be a Buffer (TTY) or a string (tests/pipe). Exported for testing.
+export function applyKeyChunk(chunk, val) {
+  const code = Buffer.isBuffer(chunk) ? chunk[0] : chunk.charCodeAt(0);
+  if (code === 3)              return { val, done: false, abort: true };
+  if (code === 13 || code === 10) return { val, done: true,  abort: false };
+  if (code === 127 || code === 8) return { val: val.slice(0, -1), done: false, abort: false };
+  const ch = Buffer.isBuffer(chunk) ? chunk.toString("utf8") : chunk;
+  return { val: val + ch, done: false, abort: false };
+}
 
 // Find env_var('NAME') references in profiles.yml (project dir first, then ~/.dbt/).
-function detectProfileEnvVars(projectDir) {
+export function detectProfileEnvVars(projectDir) {
   const candidates = [
     path.join(projectDir, "profiles.yml"),
     path.join(os.homedir(), ".dbt", "profiles.yml"),
@@ -51,21 +62,21 @@ async function runWizard(defaults) {
       process.stdin.setRawMode(true);
       process.stdin.resume();
       let val = "";
-      const onData = (ch) => {
-        const code = ch.charCodeAt(0);
-        if (code === 13 || code === 10) {
+      const onData = (chunk) => {
+        const { val: next, done, abort } = applyKeyChunk(chunk, val);
+        if (abort) { process.stdout.write("\n"); process.exit(1); }
+        if (done) {
           process.stdin.setRawMode(false);
           process.stdin.removeListener("data", onData);
           process.stdout.write("\n");
           rl.resume();
           resolve(val);
-        } else if (code === 127 || code === 8) {
-          if (val.length > 0) { val = val.slice(0, -1); process.stdout.write("\b \b"); }
-        } else if (code === 3) {
-          process.stdout.write("\n"); process.exit(1);
-        } else {
-          val += ch; process.stdout.write("*");
+          return;
         }
+        const erased = next.length < val.length;
+        val = next;
+        if (erased) process.stdout.write("\b \b");
+        else        process.stdout.write("*");
       };
       process.stdin.on("data", onData);
     });
@@ -75,7 +86,15 @@ async function runWizard(defaults) {
 
   const projectDir = path.resolve(await ask("dbt project directory", defaults.projectDir));
   const dbtCmd    = await ask("dbt command", defaults.dbtCmd);
-  const signingKey = await ask("PR review signing key (optional, Enter to skip)", defaults.signingKey || "");
+  // Signing key is a secret — never show its value in the prompt.
+  const signingKey = await (async () => {
+    if (defaults.signingKey) {
+      const hint = "*".repeat(Math.min(defaults.signingKey.length, 8));
+      const entered = await askHidden(`PR review signing key [${hint}, Enter to keep]`);
+      return entered || defaults.signingKey;
+    }
+    return askHidden("PR review signing key (optional, Enter to skip)");
+  })();
 
   // Detect and prompt for warehouse credentials from profiles.yml.
   const { file: profileFile, vars: envVarNames } = detectProfileEnvVars(projectDir);
@@ -90,9 +109,13 @@ async function runWizard(defaults) {
       const current = process.env[name];
       const isSecret = /password|secret|token|private_key(?!_path)/i.test(name);
       let val;
-      if (current) {
-        const display = isSecret ? "*".repeat(Math.min(current.length, 8)) : current;
-        val = await ask(`${name} [env: ${display}, Enter to use]`, current);
+      if (current && isSecret) {
+        // Never show actual secret value in prompt — show masked hint, use hidden input.
+        const hint = "*".repeat(Math.min(current.length, 8));
+        const entered = await askHidden(`${name} [${hint}, Enter to keep]`);
+        val = entered || current;
+      } else if (current) {
+        val = await ask(`${name} [env: ${current}, Enter to use]`, current);
       } else if (isSecret) {
         val = await askHidden(name);
       } else {
@@ -162,7 +185,10 @@ async function main() {
   return 0;
 }
 
-main().then(code => process.exit(code)).catch(e => {
-  process.stderr.write(String(e?.stack || e) + "\n");
-  process.exit(1);
-});
+// Only run when invoked directly — not when imported by tests.
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  main().then(code => process.exit(code)).catch(e => {
+    process.stderr.write(String(e?.stack || e) + "\n");
+    process.exit(1);
+  });
+}
