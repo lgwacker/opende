@@ -85,7 +85,7 @@ export function loadReviewConfig(cwd) {
   try {
     const cfgPath = path.join(cwd, ".altimate", "review.yml");
     if (fs.existsSync(cfgPath)) {
-      const raw = yamlLoad(fs.readFileSync(cfgPath, "utf8")) || {};
+      const raw = /** @type {Record<string, unknown>} */ (yamlLoad(fs.readFileSync(cfgPath, "utf8"))) || {};
       return { ...config, ...raw };
     }
   } catch {
