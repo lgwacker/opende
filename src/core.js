@@ -34,7 +34,8 @@ export function loadCore() {
       "Could not load the altimate-core engine. It ships as the dependency " +
         "`@altimateai/altimate-core` (run `npm install`), or set ALTIMATE_CORE_PATH " +
         "to a local build.\nUnderlying error: " +
-        (e?.message || e)
+        (e?.message || e),
+      { cause: e }
     );
   }
 }

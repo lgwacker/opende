@@ -93,7 +93,6 @@ describe("gate.js hook mode (--hook)", () => {
 
 describe("gate.js — render-then-analyze with compiled SQL", () => {
   let tmpSqlFile;
-  let compiledPath;
   let tmpCleanup;
 
   test.before(() => {

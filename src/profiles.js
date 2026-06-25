@@ -37,7 +37,10 @@ function profilesPath(projectDir) {
   ].filter(Boolean).find((p) => fs.existsSync(p)) || null;
 }
 
-/** Load and resolve the active target's raw config. Throws on missing project/profile/target. */
+/**
+ * Load and resolve the active target's raw config. Throws on missing project/profile/target.
+ * @param {{ projectDir?: string, target?: string }} [opts]
+ */
 export function loadProfile({ projectDir, target } = {}) {
   projectDir = projectDir || findProjectDir(process.cwd());
   if (!projectDir) throw new Error("dbt project not found (no dbt_project.yml).");
@@ -81,7 +84,10 @@ export function snowflakeConnectionOptions(o) {
   return opts;
 }
 
-/** Non-secret summary of available targets for warehouse_list. */
+/**
+ * Non-secret summary of available targets for warehouse_list.
+ * @param {{ projectDir?: string }} [opts]
+ */
 export function listTargets({ projectDir } = {}) {
   projectDir = projectDir || findProjectDir(process.cwd());
   const profileName = yaml.load(fs.readFileSync(path.join(projectDir, "dbt_project.yml"), "utf8"))?.profile;

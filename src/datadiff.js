@@ -8,7 +8,7 @@ import { query, rowsToStringMatrix } from "./warehouse.js";
 const MAX_STEPS = 200;
 
 // Default executor: run a SELECT via the native Snowflake executor, return string[][].
-async function defaultExecutor(sql) {
+async function defaultExecutor(sql, _tableSide) {
   const { columns, rows } = await query(sql); // read-only; gate allows SELECT/WITH
   return rowsToStringMatrix(columns, rows);
 }
@@ -32,8 +32,8 @@ function buildSpec(p) {
 
 /**
  * Run a data parity comparison.
- * @param params { source, target, key_columns, extra_columns?, algorithm?, where_clause?, ...db/schema }
- * @param opts.executor async (sql) => string[][]  (injectable for tests; defaults to Snowflake)
+ * @param {Object} params - source, target, key_columns, extra_columns, algorithm, where_clause, db/schema fields
+ * @param {{ executor?: (sql: string, tableSide: string) => Promise<string[][]> }} [opts]
  */
 export async function runDataDiff(params, { executor = defaultExecutor } = {}) {
   const Session = loadCore().DataParitySession;

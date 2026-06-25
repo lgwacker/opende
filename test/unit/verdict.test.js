@@ -4,10 +4,9 @@ import {
   computeIdealVerdict, applyMode,
   signEnvelope, verifyEnvelope, applyOverride,
   buildEnvelope, canonicalBody,
-  VERDICTS, REVIEW_MODES, VCS_EVENT,
+  VERDICTS, VCS_EVENT,
 } from "../../src/review/verdict.js";
 import { makeFinding } from "../../src/review/finding.js";
-import { DEFAULT_RUBRIC } from "../../src/review/rubric.js";
 
 const mkF = (severity, category = "pii_exposure", confidence = "high") =>
   makeFinding({ severity, category, title: `${severity} finding`, body: "", file: "f.sql", model: "m", ruleKey: `${severity}_${category}_${confidence}`, confidence });

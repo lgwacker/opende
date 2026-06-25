@@ -21,7 +21,7 @@ function findModelId(nodes, base) {
  * Returns { direct_downstream, transitive_downstream, downstream_count,
  *           affected_tests, severity } or an error/degraded result.
  */
-export function impactAnalysis({ model, column, changeType = "modify", manifestPath, projectDir, dialect = "snowflake" }) {
+export function impactAnalysis({ model, column = null, changeType = "modify", manifestPath, projectDir, dialect: _dialect = "snowflake" }) {
   manifestPath = manifestPath || path.join(projectDir || process.cwd(), "target", "manifest.json");
   const man = loadManifest(manifestPath);
   if (!man) {

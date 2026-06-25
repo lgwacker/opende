@@ -1,6 +1,5 @@
 // Render a verdict envelope for humans (markdown PR summary). Faithful port of
 // altimate-code's `review/format.ts`, kept separate from the engine.
-import { SEVERITY_ORDER } from "./finding.js";
 
 export const REVIEW_MARKER = "<!-- altimate-code-review -->";
 

@@ -7,18 +7,33 @@
     "test": "node --test --test-reporter=spec",
     "test:unit": "node --test --test-reporter=spec test/unit/*.test.js",
     "test:integration": "node --test --test-reporter=spec test/integration/*.test.js",
-    "test:e2e": "node --test --test-reporter=spec test/e2e/*.test.js"
+    "test:e2e": "node --test --test-reporter=spec test/e2e/*.test.js",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=90 --test-coverage-branches=80 --test-coverage-functions=95 --test-reporter=spec test/unit/*.test.js test/integration/*.test.js",
+    "lint": "eslint src/ test/",
+    "typecheck": "tsc --noEmit",
+    "prepare": "[ -d .git ] && husky || true"
   },
   "license": "MIT",
-  "repository": { "type": "git", "url": "git+https://github.com/lgwacker/opende.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lgwacker/opende.git"
+  },
   "bin": {
     "opende": "src/cli/init.js",
     "opende-mcp": "src/mcp.js",
     "opende-gate": "src/gate.js",
     "opende-review": "src/pr_review.js"
   },
-  "files": ["src", "assets", "README.md", "LICENSE", "NOTICE"],
-  "engines": { "node": ">=18" },
+  "files": [
+    "src",
+    "assets",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@altimateai/altimate-core": "0.5.1",
     "@modelcontextprotocol/sdk": "^1.0.0",
@@ -27,5 +42,16 @@
   },
   "optionalDependencies": {
     "snowflake-sdk": "^2.4.3"
+  },
+  "lint-staged": {
+    "*.js": "eslint --fix"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.0.1",
+    "eslint": "^10.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "typescript": "^6.0.3"
   }
 }

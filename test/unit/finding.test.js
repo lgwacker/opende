@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
   fingerprint, makeFinding, dedupeFindings,
-  SEVERITIES, SEVERITY_ORDER, CONFIDENCES, REVIEW_CATEGORIES,
+  SEVERITIES, SEVERITY_ORDER, REVIEW_CATEGORIES,
 } from "../../src/review/finding.js";
 
 describe("constants", () => {

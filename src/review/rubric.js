@@ -56,15 +56,15 @@ export function clampSeverity(category, proposed, confidence) {
  * keeps the false-positive rate down deterministically.
  */
 export function exclusionReason(finding, rubric = DEFAULT_RUBRIC) {
-  const ex = rubric.exclusions || {};
+  const ex = rubric.exclusions;
   const file = finding.file || "";
   const isStaging = /(^|\/)stg_|(^|\/)staging\//.test(file) || (finding.model || "").startsWith("stg_");
   const isDev = /(^|\/)(dev|sandbox|scratch)\//.test(file);
 
-  if (ex.skipNonProdModels && isDev) return "non-prod model (dev/sandbox/scratch)";
+  if (ex?.skipNonProdModels && isDev) return "non-prod model (dev/sandbox/scratch)";
 
   if (
-    ex.allowSelectStarInStaging &&
+    ex?.allowSelectStarInStaging &&
     finding.category === "warehouse_cost" &&
     isStaging &&
     /select\s*\*/i.test((finding.title || "") + " " + (finding.body || ""))
@@ -72,7 +72,7 @@ export function exclusionReason(finding, rubric = DEFAULT_RUBRIC) {
     return "SELECT * in staging is an accepted convention";
   }
 
-  for (const g of ex.excludeGlobs || []) {
+  for (const g of ex?.excludeGlobs || []) {
     const suffix = g.replace(/^\*+/, "");
     if (suffix && file.endsWith(suffix)) return `excluded by glob ${g}`;
   }

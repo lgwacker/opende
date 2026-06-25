@@ -9,7 +9,6 @@ import { claudeAdapter } from "../../src/cli/adapters/claude.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OPENDE_ROOT = path.resolve(__dirname, "../..");
-const FIXTURE_DBT = path.resolve(__dirname, "../fixtures/throwaway-dbt");
 
 describe("adapter registry", () => {
   test("ADAPTERS exports a 'claude' key", () => {

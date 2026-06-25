@@ -11,13 +11,7 @@ import { call } from "../../src/core.js";
 import { resolveSchema } from "../../src/schema.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const FIXTURE_DBT = path.resolve(__dirname, "../fixtures/throwaway-dbt");
-const FIXTURE_MANIFEST = path.join(FIXTURE_DBT, "target/manifest.json");
-const FIXTURE_CATALOG = path.join(FIXTURE_DBT, "target/catalog.json");
-
 const emptySchema = () => resolveSchema({ catalogPath: "/no/catalog.json", manifestPath: "/no/manifest.json" });
-const fixtureSchema = () => resolveSchema({ projectDir: FIXTURE_DBT, manifestPath: FIXTURE_MANIFEST, catalogPath: FIXTURE_CATALOG });
-
 const SIMPLE_SELECT = "SELECT order_id, amount FROM orders WHERE amount > 0";
 const SELECT_ONE = "SELECT 1 AS n";
 

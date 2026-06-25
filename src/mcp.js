@@ -247,6 +247,7 @@ const TOOLS = {
 async function main() {
   const server = new McpServer({ name: "opende", version: "0.1.0" });
   for (const [name, def] of Object.entries(TOOLS)) {
+    // @ts-ignore — handler return type matches at runtime; SDK's strict literal type for content.type causes false positive
     server.registerTool(name, { description: def.description, inputSchema: def.shape }, async (args) => {
       try {
         const result = await def.run(args ?? {});

@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-tooling:
+        patterns:
+          - eslint
+          - "@eslint/*"
+          - husky
+          - lint-staged
+          - typescript
+    ignore:
+      - dependency-name: "@altimateai/altimate-core"
+        update-types: ["version-update:semver-major"]

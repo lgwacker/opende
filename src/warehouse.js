@@ -34,7 +34,7 @@ async function connect(opts) {
   });
 }
 
-async function getConnection({ projectDir, target } = {}) {
+async function getConnection({ projectDir, target } = /** @type {{ projectDir?: string, target?: string }} */ ({})) {
   if (_connPromise) return _connPromise;
   const { config, missingEnvVars, target: tgt } = loadProfile({ projectDir, target });
   if (missingEnvVars.length) {
@@ -66,14 +66,14 @@ function runStatement(conn, sqlText) {
 const hasLimit = (sql) => /\blimit\s+\d+\s*;?\s*$/i.test(sql.trim());
 
 /** Low-level: gate + run, return objects. No LIMIT injection (used by finops/data_diff). */
-export async function query(sql, { allowWrite = false, projectDir, target } = {}) {
+export async function query(sql, { allowWrite = false, projectDir, target } = /** @type {{ allowWrite?: boolean, projectDir?: string, target?: string }} */ ({})) {
   await gateSql(sql, { allowWrite });
   const conn = await getConnection({ projectDir, target });
   return runStatement(conn, sql);
 }
 
 /** sql_execute: gate + auto-LIMIT + structured result with a truncation flag. */
-export async function execute(sql, { limit = 100, allowWrite = false, projectDir, target } = {}) {
+export async function execute(sql, { limit = 100, allowWrite = false, projectDir, target } = /** @type {{ limit?: number, allowWrite?: boolean, projectDir?: string, target?: string }} */ ({})) {
   const gate = await gateSql(sql, { allowWrite });
   const sqlText =
     gate.read && limit > 0 && !hasLimit(sql) ? `${sql.replace(/;\s*$/, "")} LIMIT ${limit}` : sql;
@@ -111,7 +111,7 @@ export function formatTable(result) {
 }
 
 /** Connectivity check for the active target (=warehouse_test). Never throws. */
-export async function test({ projectDir, target } = {}) {
+export async function test({ projectDir, target } = /** @type {{ projectDir?: string, target?: string }} */ ({})) {
   const { loadProfile } = await import("./profiles.js");
   let info;
   try {
