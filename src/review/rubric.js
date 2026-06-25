@@ -5,7 +5,7 @@
 // `.altimate/review.yml`.
 import fs from "node:fs";
 import path from "node:path";
-import yaml from "js-yaml";
+import { load as yamlLoad } from "js-yaml";
 
 export const DEFAULT_RUBRIC = {
   version: "1",
@@ -85,7 +85,7 @@ export function loadReviewConfig(cwd) {
   try {
     const cfgPath = path.join(cwd, ".altimate", "review.yml");
     if (fs.existsSync(cfgPath)) {
-      const raw = yaml.load(fs.readFileSync(cfgPath, "utf8")) || {};
+      const raw = yamlLoad(fs.readFileSync(cfgPath, "utf8")) || {};
       return { ...config, ...raw };
     }
   } catch {
