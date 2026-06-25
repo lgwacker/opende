@@ -41,7 +41,7 @@
     "zod": "^4.4.3"
   },
   "optionalDependencies": {
-    "snowflake-sdk": "^2.4.3"
+    "snowflake-sdk": "^3.0.0"
   },
   "lint-staged": {
     "*.js": "eslint --fix"
