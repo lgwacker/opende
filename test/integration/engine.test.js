@@ -97,6 +97,14 @@ describe("checkQueryPii", () => {
     assert.ok(r != null);
     assert.ok(Array.isArray(r.pii_columns) || r.pii_columns == null);
   });
+
+  test("each pii_column entry has a query_targets array (v0.6.0+)", async () => {
+    const r = await call("checkQueryPii", [SIMPLE_SELECT, emptySchema()]);
+    for (const c of r.pii_columns || []) {
+      assert.ok("query_targets" in c, `pii_column missing query_targets: ${JSON.stringify(c)}`);
+      assert.ok(Array.isArray(c.query_targets), `query_targets should be an array, got: ${typeof c.query_targets}`);
+    }
+  });
 });
 
 describe("checkEquivalence", () => {

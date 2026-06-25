@@ -117,7 +117,7 @@ async function checkFile(file, checks) {
     const r = await call("checkQueryPii", [sql, schema]);
     for (const c of r.pii_columns || [])
       add({ check: "pii", code: c.classification, severity: "warning",
-            message: `PII exposed: ${c.table}.${c.column} (${c.classification})`, suggestion: c.suggested_masking });
+            message: `PII exposed: ${c.table}.${c.column} (${c.classification})${c.query_targets?.length ? ` via ${c.query_targets.join(", ")}` : ""}`, suggestion: c.suggested_masking });
   }
   if (checks.has("semantic")) {
     const r = await call("checkSemantics", [sql, schema]);

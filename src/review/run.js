@@ -153,7 +153,7 @@ async function gateLane({ findings, headEngine, schema, file, model }) {
   try {
     const r = await call("checkQueryPii", [headEngine, schema]);
     for (const c of r.pii_columns || []) {
-      push({ severity: "critical", category: "pii_exposure", title: `PII exposed: ${c.table}.${c.column}`, body: `Classified ${c.classification}. ${c.suggested_masking || "Mask or justify before merge."}`, column: c.column, ruleKey: `${c.table}.${c.column}`, evidence: { tool: "check_query_pii", result: c } });
+      push({ severity: "critical", category: "pii_exposure", title: `PII exposed: ${c.table}.${c.column}`, body: `Classified ${c.classification}.${c.query_targets?.length ? ` Exposed via: ${c.query_targets.join(", ")}.` : ""} ${c.suggested_masking || "Mask or justify before merge."}`, column: c.column, ruleKey: `${c.table}.${c.column}`, evidence: { tool: "check_query_pii", result: c } });
     }
   } catch { /* lane degrade */ }
 

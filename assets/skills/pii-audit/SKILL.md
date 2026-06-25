@@ -26,7 +26,7 @@ description: Classify schema columns for PII (SSN, email, phone, name, address, 
 
 1. Never flag a column as safe solely because its name is innocuous — check type + context too.
 2. Compiled SQL (Jinja-resolved) must be used for query-level checks; raw dbt model SQL with `{{ ref() }}` gives inaccurate results.
-3. Always distinguish **exposed in SELECT** (HIGH risk) vs **used only in WHERE/JOIN** (MEDIUM risk) — the latter doesn't appear in downstream results.
+3. Always distinguish **exposed in SELECT** (HIGH risk) vs **used only in WHERE/JOIN** (MEDIUM risk) — the latter doesn't appear in downstream results. Use `query_targets` from `check_query_pii` to identify exactly which output columns carry the PII into the result set.
 
 ## Workflow
 
@@ -91,7 +91,9 @@ For each dbt model, compile first so Jinja is resolved, then call `mcp__opende__
 # compiled SQL: target/compiled/<project>/<path>.sql
 ```
 
-`mcp__opende__check_query_pii` flags columns matching PII categories appearing in SELECT, WHERE, or JOIN clauses and distinguishes exposure level.
+`mcp__opende__check_query_pii` flags columns matching PII categories appearing in SELECT, WHERE, or JOIN clauses. Each entry in `pii_columns[]` includes:
+- `table`, `column`, `classification`, `suggested_masking` — same as `classify_pii`
+- `query_targets` — which output columns in the SELECT list directly expose this PII column (empty when the PII column only appears in WHERE/JOIN, not in the result set)
 
 For batch runs, use the project gate script:
 ```bash
