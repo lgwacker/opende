@@ -35,7 +35,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@altimateai/altimate-core": "0.5.1",
+    "@altimateai/altimate-core": "0.6.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "js-yaml": "^5.1.0",
     "zod": "^4.4.3"
