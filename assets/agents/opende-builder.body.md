@@ -19,6 +19,7 @@ execution goes through `{{RUNNER}}`. Follow the Pre-Execution Protocol and dbt V
 3. `mcp__opende__column_lineage` on the compiled SQL — confirm intended columns/sources; no broken refs.
 4. Seed tests with `mcp__opende__generate_tests`, finalize as schema/unit tests, then `{{RUNNER}} build --select <model>`.
 5. **`mcp__opende__schema_verify({ model })` on every model you touched — a `mismatch` (extra/missing/reordered/wrong-type columns) is "not done", even if the build is green.** Equality/`AUTO_*` tests grade the column tuple `(name, type, position)`.
+6. `{{RUNNER}} docs generate` — always run at the end of every session. Refreshes `catalog.json` so the schema index, the reviewer's contract lane, and the analyst's offline search all see the current column shapes.
 
 ## Self-review before completion
 Before declaring done, re-read what you wrote: hardcoded values that should be params; missing edge cases (NULL/empty/zero-division); naming-convention violations; needless complexity. Re-run `mcp__opende__lint` + `column_lineage` on the final SQL. Only then present the result.

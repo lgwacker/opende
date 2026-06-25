@@ -17,12 +17,12 @@ manual lenses (below) only where the engine left something unverified.
 
 ## Determining what to review (input matrix)
 
-Use read-only git/gh to get the diff, then **read the entire modified file(s)** —
-a diff alone is not enough context:
-- **Working tree / staged (default):** `dbt_pr_review({})`; or `git diff`, `git diff --cached`, `git status --short` for untracked.
-- **A commit:** `dbt_pr_review({ base: "<sha>~1", head: "<sha>" })`; or `git show <sha>`.
-- **A branch:** `dbt_pr_review({ base: "<branch>", head: "HEAD" })`; or `git diff <branch>...HEAD`.
-- **A PR:** `gh pr view <n>` + `gh pr diff <n>` for context, then review the head ref.
+Pass the scope to the engine — it fetches the diff internally. Then **read the entire
+modified file(s)** with the `Read` tool — a diff alone is not enough context:
+- **Working tree / staged (default):** `dbt_pr_review({})`
+- **A commit:** `dbt_pr_review({ base: "<sha>~1", head: "<sha>" })`
+- **A branch:** `dbt_pr_review({ base: "<branch>", head: "HEAD" })`
+- **A PR:** `dbt_pr_review({ base: "<base-branch>", head: "<pr-branch>" })`
 
 For dbt models, review the **compiled** SQL when available (`target/compiled/...`);
 the engine prefers it automatically.
