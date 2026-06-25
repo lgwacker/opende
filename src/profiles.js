@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import yaml from "js-yaml";
+import { load as yamlLoad } from "js-yaml";
 import { findProjectDir } from "./schema.js";
 
 const ENV_VAR_RE = /\{\{\s*env_var\(\s*['"]([^'"]+)['"]\s*(?:,\s*['"]([^'"]*)['"]\s*)?\)\s*\}\}/g;
@@ -44,10 +44,10 @@ function profilesPath(projectDir) {
 export function loadProfile({ projectDir, target } = {}) {
   projectDir = projectDir || findProjectDir(process.cwd());
   if (!projectDir) throw new Error("dbt project not found (no dbt_project.yml).");
-  const profileName = yaml.load(fs.readFileSync(path.join(projectDir, "dbt_project.yml"), "utf8"))?.profile;
+  const profileName = /** @type {any} */ (yamlLoad(fs.readFileSync(path.join(projectDir, "dbt_project.yml"), "utf8")))?.profile;
   const pf = profilesPath(projectDir);
   if (!pf) throw new Error("profiles.yml not found (looked in DBT_PROFILES_DIR, project dir, ~/.dbt).");
-  const profiles = yaml.load(fs.readFileSync(pf, "utf8")) || {};
+  const profiles = /** @type {any} */ (yamlLoad(fs.readFileSync(pf, "utf8"))) || {};
   const prof = profiles[profileName];
   if (!prof) throw new Error(`profile '${profileName}' not in ${pf}.`);
   const tgt = target || process.env.DBT_TARGET || prof.target || "default";
@@ -90,9 +90,9 @@ export function snowflakeConnectionOptions(o) {
  */
 export function listTargets({ projectDir } = {}) {
   projectDir = projectDir || findProjectDir(process.cwd());
-  const profileName = yaml.load(fs.readFileSync(path.join(projectDir, "dbt_project.yml"), "utf8"))?.profile;
+  const profileName = /** @type {any} */ (yamlLoad(fs.readFileSync(path.join(projectDir, "dbt_project.yml"), "utf8")))?.profile;
   const pf = profilesPath(projectDir);
-  const prof = (yaml.load(fs.readFileSync(pf, "utf8")) || {})[profileName] || {};
+  const prof = (/** @type {any} */ (yamlLoad(fs.readFileSync(pf, "utf8"))) || {})[profileName] || {};
   return {
     profile: profileName,
     default_target: prof.target,
