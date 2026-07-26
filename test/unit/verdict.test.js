@@ -219,3 +219,24 @@ describe("buildEnvelope", () => {
     assert.ok(env.summary.degraded);
   });
 });
+
+describe("buildEnvelope tierSignals", () => {
+  const signals = { totalSqlLines: 12, maxBlast: 1, metadataRisk: false, reason: "r", computedTier: "lite" };
+
+  test("carries tierSignals into the envelope and covers them with the signature", () => {
+    const env = buildEnvelope({ findings: [], mode: "comment", tier: "lite", tierSignals: signals, generatedAt: "2026-01-01T00:00:00Z" });
+    assert.deepEqual(env.tierSignals, signals);
+    assert.ok(verifyEnvelope(env));
+  });
+
+  test("tampering with tierSignals invalidates the signature", () => {
+    const env = buildEnvelope({ findings: [], mode: "comment", tier: "lite", tierSignals: signals, generatedAt: "2026-01-01T00:00:00Z" });
+    assert.ok(!verifyEnvelope({ ...env, tierSignals: { ...signals, totalSqlLines: 9999 } }));
+  });
+
+  test("round-trips when tierSignals is absent", () => {
+    const env = buildEnvelope({ findings: [], mode: "comment", tier: "lite", generatedAt: "2026-01-01T00:00:00Z" });
+    assert.equal("tierSignals" in env && env.tierSignals !== undefined, false);
+    assert.ok(verifyEnvelope(env));
+  });
+});

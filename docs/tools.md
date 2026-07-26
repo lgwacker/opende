@@ -663,3 +663,5 @@ Layered dbt PR review over changed models → SIGNED verdict (APPROVE | COMMENT 
 | `head` | `string` | no | Head git ref (omit to review the working tree). |
 | `manifest_path` | `string` | no | — |
 | `mode` | `"comment" | "gate"` | no | comment (never blocks) | gate (blocks on REQUEST_CHANGES). |
+| `force_tier` | `"trivial" | "lite" | "full"` | no | Override the computed risk tier. Changes the reported label only — every lane always runs, so this does NOT make a review cheaper. |
+| `explain_tier` | `boolean` | no | Append the tier signals (changed SQL lines, blast radius, metadata risk) and which threshold decided the tier. |
