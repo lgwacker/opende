@@ -12,6 +12,8 @@
 //   contract        → contract_violation (schema_verify shape mismatch)
 //   structural      → semantic_change (AST DISTINCT/grain/key changes)
 //   portability     → portability (cross-dialect on added lines)
+//   metadata        → test_coverage / contract_violation / materialization / freshness
+//                     (schema.yml base-vs-head — a YAML-only PR must never auto-approve)
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -22,6 +24,7 @@ import { impactAnalysis } from "../impact.js";
 import { schemaVerify } from "../schemaverify.js";
 import { makeFinding, dedupeFindings, SEVERITY_ORDER } from "./finding.js";
 import { loadReviewConfig, resolveRubric, exclusionReason } from "./rubric.js";
+import { metadataLane, isModelYaml } from "./metadata.js";
 import { buildEnvelope } from "./verdict.js";
 
 const hasJinja = (sql) => /\{\{|\{%/.test(sql || "");
@@ -49,7 +52,9 @@ function defaultBaseRef(cwd) {
 function isModelSql(p) {
   return p.endsWith(".sql") && /(^|\/)models\//.test(p);
 }
-function collectChangedModels(cwd, base, head) {
+// Deleted files are excluded (--diff-filter=d): a removed .sql has no head side
+// to analyze, and a removed schema.yml is caught by the manifest lanes instead.
+function collectChanged(cwd, base, head, accept) {
   const out = new Set();
   // --relative makes diff paths cwd-relative (models/...), matching ls-files —
   // essential in a monorepo where the git root is ABOVE the dbt project dir.
@@ -57,12 +62,12 @@ function collectChangedModels(cwd, base, head) {
   if (head) diffArgs.push(head);
   for (const line of gitSafe(cwd, diffArgs).split("\n")) {
     const p = line.trim();
-    if (p && isModelSql(p)) out.add(p);
+    if (p && accept(p)) out.add(p);
   }
   if (!head) {
     for (const line of gitSafe(cwd, ["ls-files", "--others", "--exclude-standard"]).split("\n")) {
       const p = line.trim();
-      if (p && isModelSql(p)) out.add(p);
+      if (p && accept(p)) out.add(p);
     }
   }
   return [...out];
@@ -290,7 +295,8 @@ export async function reviewPullRequest(opts) {
 
   const base = opts.base ?? defaultBaseRef(cwd);
   const head = opts.head; // undefined ⇒ working tree
-  const changed = collectChangedModels(cwd, base, head);
+  const changed = collectChanged(cwd, base, head, isModelSql);
+  const changedYaml = collectChanged(cwd, base, head, isModelYaml);
 
   const manifestAbs = path.isAbsolute(config.manifestPath) ? config.manifestPath : path.join(cwd, config.manifestPath);
   const catalogAbs = path.join(path.dirname(manifestAbs), "catalog.json");
@@ -312,17 +318,23 @@ export async function reviewPullRequest(opts) {
   let totalSqlLines = 0;
   let maxBlast = 0;
 
+  // base side: always the file at the base ref (empty for newly-added files).
+  // head side: the head ref when given, else the working tree.
+  const sidesOf = (relpath) => {
+    const absPath = path.join(cwd, relpath);
+    return {
+      baseRaw: gitSafe(cwd, ["show", `${base}:${prefix}${relpath}`]),
+      headRaw: head
+        ? gitSafe(cwd, ["show", `${head}:${prefix}${relpath}`])
+        : fs.existsSync(absPath)
+          ? fs.readFileSync(absPath, "utf8")
+          : "",
+    };
+  };
+
   for (const relpath of changed) {
     const model = modelName(relpath);
-    // base side: always the file at the base ref (empty for newly-added models).
-    const baseRaw = gitSafe(cwd, ["show", `${base}:${prefix}${relpath}`]);
-    // head side: the head ref when given, else the working tree.
-    const absPath = path.join(cwd, relpath);
-    const headRaw = head
-      ? gitSafe(cwd, ["show", `${head}:${prefix}${relpath}`])
-      : fs.existsSync(absPath)
-        ? fs.readFileSync(absPath, "utf8")
-        : "";
+    const { baseRaw, headRaw } = sidesOf(relpath);
     // Prefer compiled SQL for the engine lanes (Jinja-free); else raw (lanes guard on Jinja).
     const headEngine = compiledSqlFor(compiledDir, projectName, relpath) || headRaw;
     const baseEngine = baseRaw; // compiled base unavailable offline → raw
@@ -344,6 +356,16 @@ export async function reviewPullRequest(opts) {
     await portabilityLane(ctx);
   }
 
+  for (const relpath of changedYaml) {
+    const { baseRaw, headRaw } = sidesOf(relpath);
+    // A newly-added schema.yml has no base side — nothing was weakened, so skip
+    // it rather than reporting every declaration in the file as a change.
+    if (!baseRaw.trim()) continue;
+    try {
+      metadataLane({ findings, file: relpath, baseYaml: baseRaw, headYaml: headRaw });
+    } catch { /* lane degrade */ }
+  }
+
   // rubric exclusions → dedupe → severityThreshold filter → severity-desc sort.
   let kept = dedupeFindings(findings.filter((f) => exclusionReason(f, rubric) === null));
   const threshold = config.severityThreshold;
@@ -355,10 +377,14 @@ export async function reviewPullRequest(opts) {
   // Risk tier (upstream risk-tier.ts thresholds: line count + downstream blast).
   // NOTE: upstream additionally hard-floors to "full" on PII/contract/source/macro
   // signals and gates lanes per tier — we classify but always run all lanes (offline).
+  // Triage promotion (upstream R20 S4): risk-bearing dbt metadata never sits in
+  // the trivial tier. A schema.yml-only PR changes no SQL, so without this it
+  // would classify as trivial and read as a clean auto-approval.
+  const metadataRisk = kept.some((f) => f.file && isModelYaml(f.file));
   let tier;
-  if (changed.length === 0) tier = "trivial";
+  if (changed.length === 0 && !metadataRisk) tier = "trivial";
   else if (totalSqlLines > 100 || maxBlast > 5) tier = "full";
-  else if (totalSqlLines <= 10 && maxBlast === 0) tier = "trivial";
+  else if (totalSqlLines <= 10 && maxBlast === 0) tier = metadataRisk ? "lite" : "trivial";
   else tier = "lite";
 
   return buildEnvelope({

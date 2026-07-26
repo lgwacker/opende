@@ -12,7 +12,8 @@
     "lint": "eslint src/ test/",
     "typecheck": "tsc --noEmit",
     "prepare": "[ -d .git ] && husky || true",
-    "release": "semantic-release"
+    "release": "semantic-release",
+    "docs:generate": "node scripts/gen-tools-doc.js"
   },
   "license": "MIT",
   "repository": {
@@ -36,7 +37,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@altimateai/altimate-core": "0.6.0",
+    "@altimateai/altimate-core": "0.7.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "js-yaml": "^5.1.0",
     "zod": "^4.4.3"
