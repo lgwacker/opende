@@ -176,7 +176,7 @@ thin future addition.
 ## Development
 
 ```bash
-npm test                  # all 228 tests (unit + integration)
+npm test                  # all 334 tests (unit + integration)
 npm run test:unit         # pure-JS tests only (~120 ms, no engine)
 npm run test:integration  # real altimate-core calls + gate subprocess tests
 ```

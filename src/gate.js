@@ -175,9 +175,42 @@ async function main() {
   let failOn = process.env.ALTIMATE_FAIL_ON || "error";
   const i = argv.indexOf("--fail-on");
   if (i !== -1) { failOn = argv[i + 1]; argv.splice(i, 2); }
+  if (!["none", "warning", "error"].includes(failOn)) {
+    // Silently defaulting an unrecognized threshold to `error` would be a
+    // surprise in the other direction: too strict, but for an invisible reason.
+    process.stderr.write(`opende gate: invalid --fail-on '${failOn ?? ""}' (expected none|warning|error)\n`);
+    return 1;
+  }
 
   const checks = new Set((process.env.ALTIMATE_CHECKS || DEFAULT_CHECKS).split(",").map((s) => s.trim()));
-  const files = hookMode ? hookTarget() : argv.filter((a) => a.endsWith(".sql") && fs.existsSync(a));
+
+  // In --hook mode, "nothing to check" is the normal case (most edits aren't SQL)
+  // and must stay silent. On the CLI it is not: a renamed model or a typo'd path
+  // would otherwise exit 0 and read as "gate passed" in pre-commit or CI.
+  let files;
+  if (hookMode) {
+    files = hookTarget();
+  } else {
+    const unknownFlags = argv.filter((a) => a.startsWith("-"));
+    if (unknownFlags.length) {
+      process.stderr.write(
+        `opende gate: unknown option(s): ${unknownFlags.join(", ")}\n` +
+          "Usage: opende-gate [--hook] [--fail-on none|warning|error] <file.sql> …\n"
+      );
+      return 1;
+    }
+    const missing = argv.filter((a) => !fs.existsSync(a));
+    if (missing.length) {
+      process.stderr.write(`opende gate: no such file: ${missing.join(", ")}\n`);
+      return 1;
+    }
+    const nonSql = argv.filter((a) => !a.endsWith(".sql"));
+    if (nonSql.length) {
+      process.stderr.write(`opende gate: not a .sql file: ${nonSql.join(", ")}\n`);
+      return 1;
+    }
+    files = argv;
+  }
   if (files.length === 0) return 0;
 
   let all = [];
