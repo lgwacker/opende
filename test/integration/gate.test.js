@@ -50,9 +50,30 @@ describe("gate.js CLI mode — file arguments", () => {
     assert.equal(result.status, 0);
   });
 
-  test("exits 0 when non-existent file path is passed (ignored)", () => {
+  // A named file the gate cannot read must NOT look like a passing gate — in a
+  // pre-commit hook or CI step a renamed model would silently go unchecked.
+  test("exits 1 and names the file when a path does not exist", () => {
     const result = runGate(["/no/such/file.sql"]);
-    assert.equal(result.status, 0);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /no such file: \/no\/such\/file\.sql/);
+  });
+
+  test("exits 1 on an unrecognized flag rather than ignoring it", () => {
+    const result = runGate(["--fial-on", "error"]);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /unknown option/);
+  });
+
+  test("exits 1 on an invalid --fail-on threshold", () => {
+    const result = runGate(["--fail-on", "bogus"]);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /invalid --fail-on/);
+  });
+
+  test("exits 1 when a named file is not SQL", () => {
+    const result = runGate(["package.json"]);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /not a \.sql file/);
   });
 });
 
