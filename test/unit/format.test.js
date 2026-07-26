@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { verdictHeadline, renderSummary, REVIEW_MARKER } from "../../src/review/format.js";
+import { verdictHeadline, renderSummary, renderTierExplanation, REVIEW_MARKER } from "../../src/review/format.js";
 import { buildEnvelope } from "../../src/review/verdict.js";
 import { makeFinding } from "../../src/review/finding.js";
 
@@ -106,5 +106,32 @@ describe("renderSummary", () => {
     const s = renderSummary(env);
     assert.ok(s.includes("⚠️"));
     assert.ok(s.includes("💡"));
+  });
+});
+
+describe("renderTierExplanation", () => {
+  const withSignals = (tierSignals, tier = "lite") =>
+    buildEnvelope({ findings: [], mode: "comment", tier, tierSignals, generatedAt: "2026-01-01T00:00:00Z" });
+
+  test("prints each signal and the threshold it is measured against", () => {
+    const out = renderTierExplanation(
+      withSignals({ totalSqlLines: 42, maxBlast: 3, metadataRisk: false, reason: "below the full-tier thresholds", computedTier: "lite" }),
+    );
+    assert.ok(out.includes("42"));
+    assert.ok(out.includes("> 100"));
+    assert.ok(out.includes("> 5"));
+    assert.ok(out.includes("below the full-tier thresholds"));
+  });
+
+  test("marks a forced tier and reports the measured one", () => {
+    const env = withSignals({ totalSqlLines: 2, maxBlast: 0, metadataRisk: false, reason: "trivial", computedTier: "trivial", forced: true }, "full");
+    const out = renderTierExplanation(env);
+    assert.ok(out.includes("FORCED"));
+    assert.ok(out.includes("measured tier was trivial"));
+    assert.ok(verdictHeadline(env).includes("full tier, forced"));
+  });
+
+  test("degrades to a one-liner on an envelope with no tier signals", () => {
+    assert.ok(renderTierExplanation(makeEnv([], { tier: "full" })).includes("no tier signals"));
   });
 });

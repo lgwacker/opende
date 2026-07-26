@@ -18,7 +18,7 @@ import { buildIndex, search as schemaSearch, cacheStatus } from "./schemaindex.j
 import { impactAnalysis } from "./impact.js";
 import { schemaVerify } from "./schemaverify.js";
 import { reviewPullRequest } from "./review/run.js";
-import { renderSummary, verdictHeadline } from "./review/format.js";
+import { renderSummary, verdictHeadline, renderTierExplanation } from "./review/format.js";
 
 // Resolve where the dbt project + artifacts live: --project-dir / env / auto-detect.
 const cfg = resolveConfig({ flags: parseFlags(process.argv.slice(2)) });
@@ -235,12 +235,15 @@ const TOOLS = {
     shape: { base: z.string().optional().describe("Base git ref (default: merge-base with origin/main)."),
       head: z.string().optional().describe("Head git ref (omit to review the working tree)."),
       manifest_path: z.string().optional(),
-      mode: z.enum(["comment", "gate"]).optional().describe("comment (never blocks) | gate (blocks on REQUEST_CHANGES).") },
+      mode: z.enum(["comment", "gate"]).optional().describe("comment (never blocks) | gate (blocks on REQUEST_CHANGES)."),
+      force_tier: z.enum(["trivial", "lite", "full"]).optional().describe("Override the computed risk tier. Changes the reported label only — every lane always runs, so this does NOT make a review cheaper."),
+      explain_tier: z.boolean().optional().describe("Append the tier signals (changed SQL lines, blast radius, metadata risk) and which threshold decided the tier.") },
     run: async (a) => {
       const env = await reviewPullRequest({ cwd: DBT_DIR, base: a.base, head: a.head,
         manifestPath: a.manifest_path || cfg.manifestPath, compiledDir: cfg.compiledDir, dbtCmd: cfg.dbtCmd,
-        mode: a.mode, generatedAt: new Date().toISOString() });
-      return verdictHeadline(env) + "\n\n" + renderSummary(env);
+        mode: a.mode, forceTier: a.force_tier, generatedAt: new Date().toISOString() });
+      const out = verdictHeadline(env) + "\n\n" + renderSummary(env);
+      return a.explain_tier ? out + "\n\n" + renderTierExplanation(env) : out;
     } },
 };
 

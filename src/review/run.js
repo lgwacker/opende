@@ -12,6 +12,7 @@
 //   contract        → contract_violation (schema_verify shape mismatch)
 //   structural      → semantic_change (AST DISTINCT/grain/key changes)
 //   portability     → portability (cross-dialect on added lines)
+//   grain not_null  → test_coverage (grain keys with no not_null test)
 //   metadata        → test_coverage / contract_violation / materialization / freshness
 //                     (schema.yml base-vs-head — a YAML-only PR must never auto-approve)
 import fs from "node:fs";
@@ -25,7 +26,10 @@ import { schemaVerify } from "../schemaverify.js";
 import { makeFinding, dedupeFindings, SEVERITY_ORDER } from "./finding.js";
 import { loadReviewConfig, resolveRubric, exclusionReason } from "./rubric.js";
 import { metadataLane, isModelYaml } from "./metadata.js";
+import { parseGrain, grainNotNullFindings, notNullFromManifest, notNullFromYamlDir } from "./grain.js";
 import { buildEnvelope } from "./verdict.js";
+
+export const TIERS = ["trivial", "lite", "full"];
 
 const hasJinja = (sql) => /\{\{|\{%/.test(sql || "");
 const lower = (s) => String(s || "").toLowerCase();
@@ -280,9 +284,33 @@ async function portabilityLane({ findings, baseRaw, headRaw, file, model }) {
   } catch { /* lane degrade */ }
 }
 
+async function grainLane({ findings, headEngine, file, model, manifest, cwd }) {
+  if (!headEngine || hasJinja(headEngine)) return; // can't parse Jinja — same guard as gateLane
+  try {
+    const grain = parseGrain(await call("extractGrain", [headEngine]));
+    if (!grain.groupBy.length && !grain.dedupPartition.length) return;
+
+    // Manifest first (it resolves inherited/package tests); schema.yml when there
+    // is no compiled artifact — mirrors how the review degrades on manifestExists.
+    let notNull = notNullFromManifest(manifest, model);
+    /** @type {"manifest" | "schema.yml"} */
+    let source = "manifest";
+    if (!notNull) {
+      notNull = notNullFromYamlDir(path.join(cwd, path.dirname(file)), model);
+      source = "schema.yml";
+    }
+    for (const f of grainNotNullFindings({ grain, notNull, source })) {
+      findings.push(makeFinding({ file, model, ...f }));
+    }
+  } catch { /* lane degrade */ }
+}
+
 /**
  * Run the review. opts:
- *   cwd (required), base?, head?, manifestPath?, mode?, generatedAt?, coreVersion?
+ *   cwd (required), base?, head?, manifestPath?, mode?, generatedAt?, coreVersion?,
+ *   forceTier? ("trivial"|"lite"|"full" — overrides the computed tier; throws on
+ *   an invalid value. Lanes are NOT tier-gated here, so this changes the reported
+ *   tier only, never the cost of the review.)
  * Returns a signed VerdictEnvelope.
  */
 export async function reviewPullRequest(opts) {
@@ -310,6 +338,14 @@ export async function reviewPullRequest(opts) {
   const dialect = config.dialect || detectDialect(manifestAbs) || "snowflake";
 
   const schema = resolveSchema({ projectDir: cwd, catalogPath: catalogAbs, manifestPath: manifestAbs, dialect });
+  // Parsed once and shared with the grain lane — a manifest is large and the lane
+  // runs per changed model.
+  let manifest = null;
+  if (manifestExists) {
+    try {
+      manifest = JSON.parse(fs.readFileSync(manifestAbs, "utf8"));
+    } catch { /* treated as absent → lanes fall back */ }
+  }
   const projectName = dbtProjectName(cwd);
   // cwd's path relative to the git root (e.g. "services/transformation/dbt/").
   // `git show <rev>:<path>` needs a ROOT-relative path; our relpaths are cwd-relative.
@@ -346,7 +382,7 @@ export async function reviewPullRequest(opts) {
       if (imp.success) maxBlast = Math.max(maxBlast, imp.downstream_count);
     }
 
-    const ctx = { findings, headEngine, baseEngine, baseRaw, headRaw, schema, file: relpath, model, dialect, rubric, manifestPath: manifestAbs, cwd };
+    const ctx = { findings, headEngine, baseEngine, baseRaw, headRaw, schema, file: relpath, model, dialect, rubric, manifestPath: manifestAbs, manifest, cwd };
     await gateLane(ctx);
     await gradeRegressionLane(ctx);
     await equivalenceLane(ctx);
@@ -354,6 +390,7 @@ export async function reviewPullRequest(opts) {
     contractLane(ctx);
     await structuralLane(ctx);
     await portabilityLane(ctx);
+    await grainLane(ctx);
   }
 
   for (const relpath of changedYaml) {
@@ -382,14 +419,32 @@ export async function reviewPullRequest(opts) {
   // would classify as trivial and read as a clean auto-approval.
   const metadataRisk = kept.some((f) => f.file && isModelYaml(f.file));
   let tier;
-  if (changed.length === 0 && !metadataRisk) tier = "trivial";
-  else if (totalSqlLines > 100 || maxBlast > 5) tier = "full";
-  else if (totalSqlLines <= 10 && maxBlast === 0) tier = metadataRisk ? "lite" : "trivial";
-  else tier = "lite";
+  let reason;
+  if (changed.length === 0 && !metadataRisk) { tier = "trivial"; reason = "no changed SQL models and no risk-bearing metadata"; }
+  else if (totalSqlLines > 100) { tier = "full"; reason = `totalSqlLines ${totalSqlLines} > 100`; }
+  else if (maxBlast > 5) { tier = "full"; reason = `maxBlast ${maxBlast} > 5`; }
+  else if (totalSqlLines <= 10 && maxBlast === 0) {
+    tier = metadataRisk ? "lite" : "trivial";
+    reason = metadataRisk
+      ? `totalSqlLines ${totalSqlLines} <= 10 and maxBlast 0, promoted from trivial by metadata risk`
+      : `totalSqlLines ${totalSqlLines} <= 10 and maxBlast 0`;
+  } else { tier = "lite"; reason = `totalSqlLines ${totalSqlLines} and maxBlast ${maxBlast} below the full-tier thresholds`; }
+
+  // The three signals are what a `(full tier)` label actually means; carrying them
+  // in the envelope is what makes `--explain-tier` possible (and keeps the
+  // signature covering them). `forced` is recorded so an operator-supplied tier is
+  // never mistaken for a measured one in a signed artifact.
+  const tierSignals = { totalSqlLines, maxBlast, metadataRisk, reason, computedTier: tier };
+  if (opts.forceTier) {
+    if (!TIERS.includes(opts.forceTier)) throw new Error(`invalid tier '${opts.forceTier}' (expected ${TIERS.join("|")})`);
+    tierSignals.forced = true;
+    tier = opts.forceTier;
+  }
 
   return buildEnvelope({
     findings: kept,
     tier,
+    tierSignals,
     mode,
     rubric,
     degraded: lintOnly,

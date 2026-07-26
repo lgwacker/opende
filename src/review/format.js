@@ -17,7 +17,28 @@ export function verdictHeadline(env) {
     [critical && `${critical} critical`, warning && `${warning} warning`, suggestion && `${suggestion} suggestion`]
       .filter(Boolean)
       .join(", ") || "no findings";
-  return `${VERDICT_LABEL[env.verdict]} — ${counts} (${env.tier} tier)`;
+  // A forced tier is labelled as such so a reader never treats it as measured.
+  const forced = env.tierSignals?.forced ? ", forced" : "";
+  return `${VERDICT_LABEL[env.verdict]} — ${counts} (${env.tier} tier${forced})`;
+}
+
+/**
+ * Explain the risk tier from the signals the engine recorded (`--explain-tier`).
+ * States plainly that the tier is a label: unlike upstream, opende never gates
+ * lanes on it, so neither the computed nor a forced tier changes what ran.
+ */
+export function renderTierExplanation(env) {
+  const s = env.tierSignals;
+  if (!s) return `Tier: ${env.tier} — no tier signals recorded in this envelope.`;
+  const lines = [
+    `Tier: ${env.tier}${s.forced ? ` (FORCED — measured tier was ${s.computedTier})` : ""}`,
+    `  changed SQL lines : ${s.totalSqlLines}   (> 100 ⇒ full)`,
+    `  max blast radius  : ${s.maxBlast}   (> 5 ⇒ full)`,
+    `  metadata risk     : ${s.metadataRisk ? "yes" : "no"}   (risk-bearing schema.yml change ⇒ never trivial)`,
+    `  decided by        : ${s.reason}`,
+  ];
+  if (s.forced) lines.push("  note              : forcing a tier changes the reported label only — every lane always runs.");
+  return lines.join("\n");
 }
 
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);

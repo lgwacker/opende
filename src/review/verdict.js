@@ -108,6 +108,10 @@ export function buildEnvelope(input) {
     idealVerdict: ideal,
     mode: input.mode,
     tier: input.tier,
+    // { totalSqlLines, maxBlast, metadataRisk, reason, computedTier, forced? } —
+    // absent on envelopes built without it (stableStringify drops undefined, so
+    // an old envelope still verifies).
+    tierSignals: input.tierSignals,
     findings: input.findings,
     summary: summarize(input.findings, degraded),
     engine: {
