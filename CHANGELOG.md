@@ -1,3 +1,10 @@
+## [0.1.4](https://github.com/lgwacker/opende/compare/v0.1.3...v0.1.4) (2026-07-26)
+
+
+### Bug Fixes
+
+* close two fail-open paths, review dbt YAML, resync with altimate-code ([#17](https://github.com/lgwacker/opende/issues/17)) ([0f36ec5](https://github.com/lgwacker/opende/commit/0f36ec5222e75a6137af35e708bfdcb935524348))
+
 # Changelog
 
 All notable changes to this project will be documented here.
