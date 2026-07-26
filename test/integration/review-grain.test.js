@@ -7,6 +7,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { reviewPullRequest } from "../../src/review/run.js";
 import { call } from "../../src/core.js";
 
@@ -158,7 +159,8 @@ describe("tier signals", () => {
 
 // The CLI surface for the tier flags, spawned as a subprocess (exit codes matter).
 describe("pr_review.js tier flags", () => {
-  const BIN = path.join(path.resolve(import.meta.dirname, "../.."), "src/pr_review.js");
+  // fileURLToPath, not import.meta.dirname — the latter is Node 20.11+ and CI runs 18.
+  const BIN = path.join(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.."), "src/pr_review.js");
   const run = (...args) =>
     execFileSync("node", [BIN, "--project-dir", repo, "--base", "HEAD", ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 
