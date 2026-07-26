@@ -1,3 +1,10 @@
+# [0.2.0](https://github.com/lgwacker/opende/compare/v0.1.4...v0.2.0) (2026-07-26)
+
+
+### Features
+
+* **review:** grain-key not_null detector + --explain-tier/--force-tier ([#18](https://github.com/lgwacker/opende/issues/18)) ([71f11a4](https://github.com/lgwacker/opende/commit/71f11a47e11d431c6e0955edaafe0e8f9c3735fe))
+
 ## [0.1.4](https://github.com/lgwacker/opende/compare/v0.1.3...v0.1.4) (2026-07-26)
 
 
